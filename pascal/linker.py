@@ -223,12 +223,12 @@ def _box(title: str) -> list[str]:
 def write_map(image: Image, placed: list[_Placed], definitions, image_name: str, diags) -> str:
     L = [f"{image_name:<40}{image.linked:>24}   VMS-LSE Linker {VERSION}", ""]
     L += _box("Object Module Synopsis")
-    L.append(f"{'Module Name':<16}{'Ident':<8}{'Code':>6}{'Data':>6}  {'File':<28}Creation Date")
-    L.append(f"{'-----------':<16}{'-----':<8}{'----':>6}{'----':>6}  {'----':<28}-------------")
+    L.append(f"{'Module Name':<16}{'Ident':<8}{'Code':>6}{'Data':>6}  {'File':<32}Creation Date")
+    L.append(f"{'-----------':<16}{'-----':<8}{'----':>6}{'----':>6}  {'----':<32}-------------")
     for p in placed:
         o = p.obj
         f = "PASRTL.OLB (run-time library)" if p.from_library else Path(o.file).name
-        L.append(f"{o.name:<16}{o.ident:<8}{len(o.code):>6X}{o.data_size:>6X}  {f:<28}{o.created}")
+        L.append(f"{o.name:<16}{o.ident:<8}{len(o.code):>6X}{o.data_size:>6X}  {f:<32}{o.created}")
 
     refs: dict[str, list[str]] = {}
     for p in placed:
