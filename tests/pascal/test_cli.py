@@ -58,6 +58,10 @@ def test_compile_errors_show_source_line_and_caret(pas):
     assert lines[3].startswith("  Explanation: ")
     r = run_cli(["PASCAL", "/NOEXPLAIN", "BAD"], pas.dir)
     assert "Explanation" not in r.stdout
+    pas.write("TABS", "PROGRAM Tabs(OUTPUT);\nBEGIN\n\tWRITELN(count)\nEND.\n")
+    lines = run_cli(["PASCAL", "TABS"], pas.dir).stdout.splitlines()
+    assert lines[0] == "     3          WRITELN(count)"
+    assert lines[1].index("^") == lines[0].index("count")
 
 
 def test_runtime_error_from_the_shell(pas):

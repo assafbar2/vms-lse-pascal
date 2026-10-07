@@ -210,12 +210,12 @@ def write_listing(text: str, source: str, out: CompileOutcome, created: str) -> 
     for d in by_line.get(0, []):
         L.append(d.format())
     for i, src_line in enumerate(lines, 1):
-        L.append(f"{i:5d} {levels[i - 1]:3d}  {src_line}")
+        L.append(f"{i:5d} {levels[i - 1]:3d}  {src_line.expandtabs(8)}")
         ds = by_line.get(i, [])
         if ds:
-            marks = [" "] * (max((d.column or 1) for d in ds) + 1)
-            for n, d in enumerate(ds, 1):
-                col = (d.column or 1) - 1
+            cols = [len(src_line[:(d.column or 1) - 1].expandtabs(8)) for d in ds]
+            marks = [" "] * (max(cols) + 1)
+            for n, col in enumerate(cols, 1):
                 if marks[col] == " ":
                     marks[col] = str(n % 10)
             L.append(" " * 11 + "".join(marks).rstrip())

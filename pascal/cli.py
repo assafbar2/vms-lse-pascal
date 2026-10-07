@@ -101,10 +101,10 @@ def _source_excerpt(d: Diagnostic) -> list[str]:
         return []
     if not 1 <= d.line <= len(lines):
         return []
-    text = lines[d.line - 1].expandtabs(8)
-    out = [f"{d.line:6d}  {text}"]
+    raw = lines[d.line - 1]
+    out = [f"{d.line:6d}  {raw.expandtabs(8)}"]
     if d.column:
-        out.append(" " * (8 + d.column - 1) + "^")
+        out.append(" " * (8 + len(raw[:d.column - 1].expandtabs(8))) + "^")
     return out
 
 
