@@ -1,4 +1,4 @@
-from conftest import new_program
+from lse_helpers import new_program
 
 from lse import placeholders as ph
 from lse.overlays import MenuOverlay, TextViewOverlay

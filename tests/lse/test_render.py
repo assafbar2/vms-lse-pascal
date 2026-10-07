@@ -1,4 +1,4 @@
-from conftest import new_program
+from lse_helpers import new_program
 
 from lse.helpscreen import keypad_diagram, keypad_lines
 from lse.overlays import KeyTestOverlay, TextViewOverlay

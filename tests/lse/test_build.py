@@ -3,7 +3,7 @@
 import types
 
 import pytest
-from conftest import HELLO
+from lse_helpers import HELLO
 
 from lse.testing import EditorHarness, FakePascalApi
 from lse.toolchain import Toolchain, ToolchainUnavailable

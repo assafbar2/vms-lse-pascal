@@ -1,24 +1,38 @@
 [build-system]
-requires = ["setuptools>=61"]
+requires = ["setuptools>=64"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "vms-lse-pascal"
 version = "0.1.0"
-description = "A VAX/VMS LSE-style terminal editor for Pascal, with COMPILE / LINK / RUN"
+description = "A VAX/VMS LSE-style editor with a Pascal COMPILE / LINK / RUN toolchain and a guided tutorial"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = ['windows-curses; sys_platform == "win32"']
+license = { text = "MIT" }
+dependencies = [
+    "windows-curses; sys_platform == 'win32'",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
 
 [project.scripts]
 lse = "lse.app:main"
+pascal = "pascal.cli:pascal_main"
+link = "pascal.cli:link_main"
+run = "pascal.cli:run_main"
+# Aliases that cannot collide with the Unix `link` command.
+paslink = "pascal.cli:link_main"
+pasrun = "pascal.cli:run_main"
 
 [tool.setuptools.packages.find]
-include = ["lse*"]
+include = ["pascal*", "lse*"]
 
 [tool.setuptools.package-data]
-lse = ["languages/*.lse"]
+pascal = ["*.OLB"]
+lse = ["languages/*.lse", "lessons/*.lesson", "help/*.hlp"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["."]
+addopts = "--import-mode=importlib"

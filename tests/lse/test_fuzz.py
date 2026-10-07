@@ -3,7 +3,7 @@
 import random
 
 import pytest
-from conftest import HELLO
+from lse_helpers import HELLO
 
 from lse.keymap import MODERN_PROFILE
 from lse.testing import EditorHarness

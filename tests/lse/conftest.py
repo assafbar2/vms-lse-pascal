@@ -3,17 +3,14 @@ import sys
 
 import pytest
 
-ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-if ROOT not in sys.path:
-    sys.path.insert(0, ROOT)
+HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
+for path in (ROOT, HERE):
+    if path not in sys.path:
+        sys.path.insert(0, path)
 
 from lse.testing import EditorHarness  # noqa: E402
-
-HELLO = """PROGRAM Hello(INPUT, OUTPUT);
-BEGIN
-  WRITELN('Hello, world')
-END.
-"""
+from lse_helpers import HELLO  # noqa: E402
 
 
 @pytest.fixture
@@ -28,10 +25,3 @@ def hello(tmp_path):
     harness = EditorHarness(tmp_path, files={"HELLO.PAS": HELLO})
     harness.open("HELLO.PAS")
     return harness
-
-
-def new_program(h, name="Hello"):
-    """Open NEW.PAS and expand PROGRAM with a name; cursor on %[declarations]%..."""
-    h.open("NEW.PAS")
-    h.feed(f"<Tab><Enter>{name}<Tab>")
-    return h
