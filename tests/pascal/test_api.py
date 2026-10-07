@@ -67,6 +67,27 @@ def test_parse_source_reports_placeholders_with_positions():
         "%PASCAL-E-PLACEHOLDER, unexpanded placeholder %{statement}% at line 3, column 3")
 
 
+def test_tutor_style_checks_on_a_partly_finished_program():
+    text = ("PROGRAM Guess(INPUT, OUTPUT);\nVAR\n  secret, guess, tries : INTEGER;\nBEGIN\n"
+            "  RANDOMIZE;\n  Secret := random(100) + 1;\n  %{statement}%...\n"
+            "  REPEAT\n    READLN(guess);\n    IF guess < secret THEN WRITELN('Too low!')\n"
+            "  UNTIL guess = secret\nEND.\n")
+    ast = api.parse_source(text).ast
+    assert ast.declares("secret", "INTEGER") and ast.declares("TRIES")
+    assert not ast.declares("secret", "REAL") and not ast.declares("answer")
+    assert len(api.find_statements(ast, "secret := RANDOM(100) + 1")) == 1
+    assert len(api.find_statements(ast, "secret := RANDOM(%{n}%) + 1")) == 1
+    assert len(api.find_statements(ast, "secret := RANDOM(99) + 1")) == 0
+    assert len(api.find_statements(ast, "RANDOMIZE")) == 1
+    assert len(api.find_statements(ast, "IF guess < secret THEN %{statement}%")) == 1
+    assert len(api.find_statements(ast, "IF %{condition}% THEN WRITELN('Too low!')")) == 1
+    assert len(api.find_statements(ast, "IF %{condition}% THEN WRITELN('too low!')")) == 0
+    assert len(api.find_statements(ast, "REPEAT %{statement}%... UNTIL guess = secret")) == 1
+    assert len(api.find_statements(ast, "REPEAT READLN(guess) UNTIL %{c}%")) == 0
+    assert api.parse_statement("x := ") is None
+    assert api.parse_statement("a := 1; b := 2") is None
+
+
 def test_full_pipeline_with_seed_and_input(pas):
     pas.copy_example("GUESS")
     assert api.compile_file(pas.dir / "GUESS").ok

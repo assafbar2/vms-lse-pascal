@@ -91,6 +91,13 @@ class Program(Node):
     def statements(self) -> list[Node]:
         return [n for n in walk(self) if n.is_statement]
 
+    def declares(self, name: str, type_text: str | None = None) -> bool:
+        """True if a variable ``name`` is declared (with type ``type_text``, if given)."""
+        def norm(s):
+            return "".join(s.upper().split())
+        return any(n.upper() == name.upper() and (type_text is None or norm(t) == norm(type_text))
+                   for n, t in self.variables())
+
 
 @dataclass(eq=False, kw_only=True)
 class Block(Node):
@@ -427,6 +434,60 @@ class PlaceholderExpr(Expr):
     required: bool = True
     text: str = ""
     kind = "placeholder_expr"
+
+
+# ----------------------------------------------------------------------
+# Pattern matching (used by the tutor's CONTAINS_STATEMENT checks)
+# ----------------------------------------------------------------------
+
+_POSITION_FIELDS = {"line", "column", "end_line", "end_column"}
+_PLACEHOLDERS = (PlaceholderExpr, PlaceholderStmt, PlaceholderType)
+
+
+def _is_wildcard(n) -> bool:
+    return isinstance(n, _PLACEHOLDERS)
+
+
+def _is_repeat(n) -> bool:
+    return _is_wildcard(n) and (getattr(n, "text", "") or getattr(n, "text_", "")).endswith("...")
+
+
+def _match_list(pats: list, items: list) -> bool:
+    if not pats:
+        return not items
+    head, rest = pats[0], pats[1:]
+    if _is_repeat(head):
+        return any(_match_list(rest, items[i:]) for i in range(len(items) + 1))
+    return bool(items) and _match_value(head, items[0], "") and _match_list(rest, items[1:])
+
+
+def _match_value(a, b, field_name: str) -> bool:
+    if isinstance(a, Node):
+        return isinstance(b, Node) and matches(a, b)
+    if isinstance(a, list):
+        return isinstance(b, list) and _match_list(a, b)
+    if isinstance(a, str) and isinstance(b, str) and field_name != "value":
+        return a.upper() == b.upper()
+    return a == b
+
+
+def matches(pattern: Node, node: Node) -> bool:
+    """Does ``node`` have the shape of ``pattern``?
+
+    Placeholders in the pattern match anything (a placeholder ending in
+    ``...`` matches any number of list items, e.g. statements). Names
+    compare without regard to case; string literals compare exactly.
+    """
+    if _is_wildcard(pattern):
+        return True
+    if type(pattern) is not type(node):
+        return False
+    for f in fields(pattern):
+        if f.name in _POSITION_FIELDS or f.name == "text" and isinstance(pattern, RealLit):
+            continue
+        if not _match_value(getattr(pattern, f.name), getattr(node, f.name), f.name):
+            return False
+    return True
 
 
 # ----------------------------------------------------------------------

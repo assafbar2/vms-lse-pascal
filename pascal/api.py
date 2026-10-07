@@ -23,7 +23,7 @@ from .vm import VM
 __all__ = [
     "Diagnostic", "MessageInfo", "CompileResult", "ParseResult", "LinkResult", "RunResult",
     "parse_source", "compile_file", "link", "run_image", "get_message", "all_messages",
-    "read_dia", "astnodes", "DEFAULT_MAX_STEPS",
+    "read_dia", "parse_statement", "find_statements", "astnodes", "DEFAULT_MAX_STEPS",
 ]
 
 # Instruction limit for non-interactive runs, so a program stuck in a loop
@@ -72,6 +72,24 @@ def parse_source(text: str, filename: str = "<buffer>", *, semantic: bool = True
     """
     out = check_source(text, filename, semantic=semantic)
     return ParseResult(out.ast, out.diagnostics)
+
+
+def parse_statement(text: str) -> astnodes.Statement | None:
+    """Parse one statement (placeholders allowed, as wildcards); None if it is not a single valid statement."""
+    src = f"PROGRAM Pattern;\nBEGIN\n{text}\nEND.\n"
+    out = check_source(src, "<pattern>", semantic=False)
+    if out.ast is None or any(d.is_error and d.ident != "PLACEHOLDER" for d in out.diagnostics):
+        return None
+    stmts = [s for s in out.ast.block.body.stmts if s.kind != "empty"]
+    return stmts[0] if len(stmts) == 1 else None
+
+
+def find_statements(ast: astnodes.Program | None, pattern: str) -> list[astnodes.Statement]:
+    """Statements anywhere in ``ast`` that match ``pattern`` (see :func:`astnodes.matches`)."""
+    pat = parse_statement(pattern)
+    if ast is None or pat is None:
+        return []
+    return [s for s in ast.statements() if astnodes.matches(pat, s)]
 
 
 def compile_file(path, *, list_file: bool = False) -> CompileResult:
