@@ -38,7 +38,7 @@ class CursesHost(Host):
         curses.def_prog_mode()
         curses.endwin()
         out = sys.stdout
-        out.write("\n" + before + "\n\n")
+        out.write("\x1b[H\x1b[2J" + before + "\n\n")
         out.flush()
         result = None
         try:

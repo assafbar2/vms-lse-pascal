@@ -460,7 +460,7 @@ def key_bar(ed: "Editor", width: int) -> list:
         body = body[:-1]
     if segs:
         segs[-1] = (segs[-1][0].rstrip(), segs[-1][1])
-    return [segs]
+    return [[("", "keybar")] + segs]
 
 
 def next_panel(ed: "Editor", width: int) -> list:
