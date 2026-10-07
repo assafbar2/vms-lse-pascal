@@ -77,41 +77,59 @@ def command_panel(editor: "Editor", width: int) -> list:
 
 
 def status_text(editor: "Editor", win: Window, width: int) -> str:
+    return status_line(editor, win, width)[0]
+
+
+def status_line(editor: "Editor", win: Window, width: int) -> tuple[str, list[tuple[int, int, str]]]:
+    """The status line text and ``(start, end, role)`` spans for styled segments.
+
+    A status provider returns plain text, or a list of ``(text, role)``
+    pieces when parts of its segment need their own look.
+    """
     buf = win.buffer
     name = buf.display_name + (" *" if buf.modified else "")
     lang = buf.language.display_name if buf.language else ("System" if buf.system else "Text")
     mode = "Read-only" if buf.read_only else ("Insert" if editor.insert_mode else "Overstrike")
     position = f"{buf.row + 1}/{len(buf.lines)}"
     direction = "Forward" if editor.direction == "FORWARD" else "Reverse"
-    middle = []
+    middle: list[list[tuple[str, str]]] = []
     for provider in editor.status_providers:
         seg = provider(editor, win)
         if seg:
-            middle.append(seg)
+            middle.append([(seg, "status")] if isinstance(seg, str) else list(seg))
 
-    def compose(right_parts: list[str], mid: list[str], left: str) -> str:
+    def compose(right_parts: list[str], mid: list[list[tuple[str, str]]], left: str):
         out = f"[ {left} ]"
+        spans: list[tuple[int, int, str]] = []
         for seg in mid:
-            out += f"--[ {seg} ]"
+            out += "--[ "
+            for text, role in seg:
+                if role != "status":
+                    spans.append((len(out), len(out) + len(text), role))
+                out += text
+            out += " ]"
         right = "[ " + " | ".join(right_parts) + " ]"
         tail = "----"
         fill = width - len(out) - len(right) - len(tail)
         if fill < 2:
-            return ""
-        return out + "-" * fill + right + tail
+            return None
+        return out + "-" * fill + right + tail, spans
 
     attempts = [
         ([lang, mode, direction, position], middle),
         ([lang, mode, position], middle),
         ([mode, position], middle),
+        ([position], middle),
+        ([lang, mode, position], middle[:1]),
+        ([position], middle[:1]),
         ([lang, mode, position], []),
         ([position], []),
     ]
     for right_parts, mid in attempts:
-        text = compose(right_parts, mid, name)
-        if text:
-            return text
-    return f"[ {name} ] {position}"[:width].ljust(width, "-")
+        done = compose(right_parts, mid, name)
+        if done:
+            return done
+    return f"[ {name} ] {position}"[:width].ljust(width, "-"), []
 
 
 def _draw_line(scr: VirtualScreen, row: int, line) -> None:
@@ -166,8 +184,13 @@ def draw_window(editor: "Editor", scr: VirtualScreen, win: Window, index: int, t
         left_col = 0
         if win.show_status:
             srow = top + height - 1
-            scr.fill(srow, "status" if current else "status_inactive")
-            scr.put(srow, 0, status_text(editor, win, w), "status" if current else "status_inactive")
+            role = "status" if current else "status_inactive"
+            text, spans = status_line(editor, win, w)
+            scr.fill(srow, role)
+            scr.put(srow, 0, text, role)
+            if current:
+                for start, end, span_role in spans:
+                    scr.set_role(srow, start, end, span_role)
             scr.regions[f"status{index}"] = [srow]
     scr.regions[f"window{index}"] = rows
     scr.regions.setdefault("text_area", []).extend(rows)

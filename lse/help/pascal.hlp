@@ -1,0 +1,387 @@
+! VMS-style help library for LSE: HELP PASCAL [topic [subtopic]]
+! "n NAME" starts a topic at level n; other lines are its text.
+1 PASCAL
+ Pascal is a small, readable programming language, designed in 1970 by
+ Niklaus Wirth for teaching. A Pascal program says first what it works
+ with (its variables) and then what it does (its statements).
+
+ Pick a topic below. Each one is short and has examples you can copy.
+ Inside LSE you rarely type a whole statement: type a word such as IF
+ and press Tab, and LSE writes the template for you to fill in.
+
+2 PROGRAM
+ Every program has the same shape: a heading, declarations, and the
+ statements between BEGIN and END. The full stop after the last END
+ marks the end of the program.
+
+   PROGRAM Hello(INPUT, OUTPUT);
+   BEGIN
+     WRITELN('Hello, world!')
+   END.
+
+ INPUT and OUTPUT say that the program reads the keyboard and writes to
+ the screen. Statements are separated by semicolons; there is no ;
+ before END (Pascal allows one there, but it is not needed).
+
+ In LSE: a new .PAS file starts as %{compilation_unit}%. Press Tab and
+ Enter to choose PROGRAM, then type the name.
+3 Example
+   PROGRAM Greet(INPUT, OUTPUT);
+   VAR
+     age : INTEGER;
+   BEGIN
+     WRITE('How old are you? ');
+     READLN(age);
+     WRITELN('Next year you will be ', age + 1:1)
+   END.
+
+2 VAR
+ A variable is a named box that holds one value. You must declare
+ every variable, with its type, in a VAR section before BEGIN:
+
+   VAR
+     secret, guess, tries : INTEGER;
+     answer : CHAR;
+     done : BOOLEAN;
+
+ Several names can share a type: separate them with commas. A new
+ variable holds no value until you give it one with := (LSE stops the
+ program with %PAS-F-UNINITVAR if you use it before that).
+
+ Names start with a letter and contain letters, digits and _. Pascal
+ does not care about upper or lower case: Tries and TRIES are the same.
+3 Example
+   VAR
+     count : INTEGER;
+   BEGIN
+     count := 0;
+     count := count + 1;
+     WRITELN(count:1)       { prints 1 }
+   END.
+
+2 TYPES
+ The type of a variable says what kind of value it can hold.
+
+   INTEGER   whole numbers: 42, -7, 0
+   REAL      numbers with a fraction: 3.14, -0.5, 1.0E6
+   BOOLEAN   TRUE or FALSE
+   CHAR      one character: 'A', '7', ' '
+
+ You can also make your own types in a TYPE section: ranges, arrays
+ and records. See the subtopics.
+3 Subranges
+ A subrange allows only the values between two limits:
+
+   TYPE
+     Percent = 0..100;
+     Digit = '0'..'9';
+   VAR
+     score : Percent;
+3 ARRAY
+ An array is a row of boxes of the same type, numbered by an index:
+
+   VAR
+     scores : ARRAY [1..10] OF INTEGER;
+     i : INTEGER;
+   BEGIN
+     FOR i := 1 TO 10 DO
+       scores[i] := 0;
+     scores[3] := 95
+   END.
+
+ A PACKED ARRAY [1..n] OF CHAR holds a piece of text of length n.
+3 RECORD
+ A record keeps several named fields together; they can have different
+ types. Write record.field to use one field.
+
+   TYPE
+     Player = RECORD
+       name : PACKED ARRAY [1..10] OF CHAR;
+       score : INTEGER
+     END;
+   VAR
+     p : Player;
+   BEGIN
+     p.score := 10
+   END.
+
+2 ASSIGNMENT
+ := puts a value into a variable. Read it as "becomes":
+
+   tries := 0;              { tries becomes 0 }
+   tries := tries + 1;      { tries becomes one more than it was }
+   secret := RANDOM(100) + 1;
+
+ The right-hand side is worked out first, then stored on the left. The
+ value must fit the variable's type: you cannot put 3.5 in an INTEGER.
+ Do not confuse := (store) with = (compare, as in IF guess = secret).
+
+2 EXPRESSIONS
+ An expression works out a value.
+
+   + - *        add, subtract, multiply
+   /            divide, giving a REAL (7 / 2 is 3.5)
+   DIV  MOD     whole-number divide and remainder (7 DIV 2 is 3, 7 MOD 2 is 1)
+   = <> < > <= >=   compare, giving TRUE or FALSE
+   AND  OR  NOT     combine tests
+
+ Put brackets round each comparison when you combine them:
+
+   IF (guess > 0) AND (guess <= 100) THEN ...
+
+ Standard functions: ABS SQR SQRT ODD ORD CHR SUCC PRED TRUNC ROUND,
+ and RANDOM(n) (see RANDOM).
+
+2 WRITELN
+ WRITELN prints its items on the screen and then starts a new line.
+ WRITE does the same but stays on the line (good for a question).
+
+   WRITELN('Hello');                  { text goes in single quotes }
+   WRITELN('You got it in ', tries:1, ' tries.');
+   WRITE('Your guess? ');
+
+ Separate several items with commas. A number is printed in a field of
+ 10 characters (REAL: 12) unless you give a width: tries:1 prints it
+ with no spaces in front, x:8:2 prints a REAL with 2 decimals.
+ WRITELN on its own prints an empty line. To print a quote, double it:
+ WRITELN('It''s done').
+3 Example
+   WRITELN('Name':10, 'Score':6);
+   WRITELN('Ada':10, 95:6);
+   WRITELN('Area: ', 3.14159 * 2 * 2:6:2)
+
+2 READLN
+ READLN waits for the user to type a line and press RETURN, and puts
+ what they typed into the variables in brackets:
+
+   WRITE('Your guess? ');
+   READLN(guess);
+
+ If the user types letters where a number is expected, the program
+ says %PAS-W-INVSYNINT, explains, and asks again, so it does not crash.
+ READ reads values but stays on the same input line.
+3 Example
+   VAR
+     a, b : INTEGER;
+   BEGIN
+     WRITE('Two numbers: ');
+     READLN(a, b);
+     WRITELN('Their sum is ', a + b:1)
+   END.
+
+2 IF
+ IF chooses: it runs a statement only when a test is TRUE. ELSE gives
+ the statement to run when the test is FALSE.
+
+   IF guess < secret THEN
+     WRITELN('Too low!')
+   ELSE IF guess > secret THEN
+     WRITELN('Too high!')
+   ELSE
+     WRITELN('Correct!')
+
+ There is no semicolon just before ELSE: the IF is not finished yet.
+ To run several statements, group them with BEGIN ... END:
+
+   IF tries > 10 THEN
+   BEGIN
+     WRITELN('Out of tries!');
+     WRITELN('The number was ', secret:1)
+   END
+
+ In LSE: type IF and press Tab, then Tab through the placeholders.
+ %[else_part]% offers ELSE or ELSE IF; Ctrl-K erases it.
+
+2 CASE
+ CASE picks one of several statements by a value:
+
+   CASE answer OF
+     'Y', 'y' : WRITELN('Again!');
+     'N', 'n' : WRITELN('Goodbye')
+   OTHERWISE
+     WRITELN('Please type Y or N')
+   END
+
+ The value can be an INTEGER, a CHAR or a BOOLEAN. Ranges such as
+ 1..5 are allowed as labels.
+
+2 LOOPS
+ A loop runs statements again and again. Pascal has three:
+
+   WHILE test DO statement           test first, may run 0 times
+   REPEAT statements UNTIL test      test last, runs at least once
+   FOR i := 1 TO 10 DO statement     counts a fixed number of times
+
+ A loop that never ends can be stopped with Ctrl-C while it runs.
+3 WHILE
+ WHILE runs its statement as long as the test is TRUE. The test is made
+ first, so if it is FALSE at the start the statement never runs. Use
+ BEGIN ... END to repeat several statements.
+
+   n := 1;
+   WHILE n <= 5 DO
+   BEGIN
+     WRITELN(n:1);
+     n := n + 1
+   END
+3 REPEAT
+ REPEAT runs the statements between REPEAT and UNTIL, then tests. It
+ stops when the test is TRUE, so the statements always run at least
+ once. No BEGIN ... END is needed.
+
+   REPEAT
+     WRITE('Your guess? ');
+     READLN(guess)
+   UNTIL guess = secret
+3 FOR
+ FOR counts: the control variable goes from the first value to the last,
+ one step at a time (DOWNTO counts down).
+
+   FOR i := 1 TO 10 DO
+     WRITELN(i:2, ' squared is ', i * i:3);
+
+   FOR i := 10 DOWNTO 1 DO
+     WRITE(i:1, ' ');
+
+ The control variable must be declared (INTEGER or CHAR) and should not
+ be changed inside the loop.
+
+2 PROCEDURES
+ A procedure is a named group of statements. Declare it before the
+ BEGIN of the program, then run it by writing its name. Procedures keep
+ a program tidy: write the steps once, use them often.
+
+   PROCEDURE SayHello;
+   BEGIN
+     WRITELN('Hello!')
+   END;
+
+   BEGIN
+     SayHello;
+     SayHello
+   END.
+
+ In LSE: on %[declarations]%, choose PROCEDURE (or type PROCEDURE and
+ press Tab).
+3 PARAMETERS
+ Parameters pass values into a procedure. A value parameter gets a copy;
+ a VAR parameter works on the caller's own variable and can change it.
+
+   PROCEDURE ShowScore(name : CHAR; points : INTEGER);
+   BEGIN
+     WRITELN(name, ': ', points:1)
+   END;
+
+   PROCEDURE AddOne(VAR count : INTEGER);
+   BEGIN
+     count := count + 1
+   END;
+3 FUNCTIONS
+ A function is a routine that gives back a value. Inside it, assign the
+ result to the function's own name.
+
+   FUNCTION Square(x : INTEGER) : INTEGER;
+   BEGIN
+     Square := x * x
+   END;
+
+   ...
+   WRITELN(Square(7):1)      { prints 49 }
+
+ Functions and procedures can call themselves (recursion): see
+ examples/FACTORIAL.PAS.
+
+2 RANDOM
+ RANDOM(n) gives a whole number from 0 to n - 1, so RANDOM(100) + 1 is
+ 1 to 100. Call RANDOMIZE once at the start so that each run picks
+ different numbers.
+
+   RANDOMIZE;
+   secret := RANDOM(100) + 1;
+
+ RANDOMIZE and RANDOM come from the run-time library PASRTL (routine
+ PAS$RANDOM); LINK adds them to your program. RUN/SEED=7 (or lse --seed 7)
+ makes the numbers the same every time, which helps when testing.
+
+2 COMMENTS
+ A comment is a note for people; the compiler skips it. Write it in
+ curly brackets or between (* and *):
+
+   tries := 0;   { nobody has guessed yet }
+   (* This also is a comment. *)
+
+ That is why LSE's placeholders look like %{this}% and not {this}.
+
+2 COMPILE-LINK-RUN
+ Turning your program into something the computer runs takes three
+ steps. In LSE, F5 does all three; F7 only compiles.
+
+   COMPILE   checks the program and translates it into p-code:
+             GUESS.PAS -> GUESS.OBJ (and GUESS.DIA, the messages)
+   LINK      joins the object file with the ready-made routines it uses
+             from the run-time library PASRTL.OLB:
+             GUESS.OBJ -> GUESS.EXE (and GUESS.MAP, a list of the parts)
+   RUN       starts GUESS.EXE on the p-code machine
+
+ The status line shows where you are: EDIT > COMPILE > LINK > RUN. A
+ stage marked * is out of date (you changed the program since), one
+ marked ! failed.
+
+ Outside LSE, in a shell:  pascal GUESS,  link GUESS,  run GUESS.
+3 COMPILE
+ COMPILE (F7) checks the whole program. Each mistake is reported as a
+ message with an explanation and a hint; F8 goes to the next one and
+ Shift-F8 to the previous one. REVIEW lists them all in a window.
+
+   %PASCAL-E-SEMIEXP, ";" expected at line 9, column 3
+
+ A compile with errors does not write GUESS.OBJ. COMPILE /LIST also
+ writes a listing, GUESS.LIS.
+3 LINK
+ LINK puts the pieces together: your object file, any modules you
+ compiled separately, and the run-time library. It writes GUESS.EXE and
+ a map, GUESS.MAP, that lists every routine and where it came from. Open
+ the map with Ctrl-O GUESS.MAP to see PAS$RANDOM taken from PASRTL.
+
+ If a name is used but defined nowhere, LINK says %LINK-W-UNDFSYMS and
+ does not write the .EXE.
+3 RUN
+ RUN (F5) gives the screen to your program: type your answers and press
+ RETURN. Ctrl-C stops it. Afterwards, press RETURN to go back to LSE;
+ what the program printed is in the buffer $OUTPUT (Ctrl-B lists buffers).
+
+ If the program fails, for example by dividing by zero, it stops with a
+ %PAS-F- message and a traceback listing the routines that were running
+ and their line numbers. F8 goes to the line where it stopped.
+3 MODULES
+ A MODULE holds procedures and functions for other programs to use. Mark
+ them [GLOBAL]; the program that uses them declares them [EXTERNAL].
+ Compile each file, then LINK them together:
+
+   LINK MATHDEMO, MATHLIB
+
+ See examples/MATHLIB.PAS and examples/MATHDEMO.PAS.
+
+2 MESSAGES
+ Every message from the compiler, the linker and the running program
+ looks like this:
+
+   %PASCAL-E-UNDECLID, undeclared identifier "count" at line 12
+
+ PASCAL (or LINK, PAS) says who is talking, the letter is the severity
+ (I = information, W = warning, E = error, F = fatal) and UNDECLID is the
+ message's name. Each comes with an explanation and a hint; SET MESSAGES
+ /NOEXPLAIN leaves those out. Pick a message below to read about it.
+
+2 PLACEHOLDERS
+ LSE writes templates for you. The blanks in them are placeholders:
+
+   %{name}%      required: Pascal needs something here
+   %[name]%      optional: erase it with Ctrl-K if you do not need it
+   %{name}%...   a list: after you fill one in, Tab starts the next
+
+ Tab on a placeholder expands it or opens a menu of choices; typing
+ replaces it; Shift-Tab goes back. Type a word such as IF, WHILE or
+ WRITELN and press Tab to get its template. F1 on a placeholder explains
+ it, with an example. A compile stops at any placeholder that is left
+ (%PASCAL-E-PLACEHOLDER), and F8 takes you to it.

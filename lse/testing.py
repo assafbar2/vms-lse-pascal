@@ -48,18 +48,56 @@ from .keys import normalize_key, parse_keys
 from .toolchain import Toolchain
 
 
+class FakeClock:
+    """A clock for tests: time only moves when ``advance`` is called."""
+
+    def __init__(self, start: float = 1000.0) -> None:
+        self.now = start
+
+    def __call__(self) -> float:
+        return self.now
+
+    def advance(self, seconds: float) -> None:
+        self.now += seconds
+
+
 class EditorHarness:
+    """Drive an editor headlessly.
+
+    By default it is the bare editor core. With ``app=True`` it is built
+    the way ``lse`` builds it (NEXT line, key bar, pipeline indicator,
+    help library, tutor, welcome screen), with the per-user state in
+    ``<directory>/.lse-state`` and a ``FakeClock`` in ``h.clock``. Pass
+    ``args`` (the ``lse`` command-line arguments, e.g. ``[]`` or
+    ``["--tutorial"]``) to run the launch flow as well.
+    """
+
     def __init__(self, directory: str | os.PathLike | None = None, *,
                  files: dict[str, str] | None = None, size: tuple[int, int] = (24, 80),
-                 api: Any = None, program_input: str = "", raise_errors: bool = True) -> None:
+                 api: Any = None, program_input: str = "", raise_errors: bool = True,
+                 app: bool = False, args: list[str] | None = None,
+                 state_dir: str | None = None) -> None:
         self.dir = str(directory) if directory is not None else tempfile.mkdtemp(prefix="lse-")
         os.makedirs(self.dir, exist_ok=True)
         for name, text in (files or {}).items():
             self.write_file(name, text)
         self.api = api if api is not None else FakePascalApi()
         self.host = HeadlessHost(program_input)
-        self.editor = Editor(cwd=self.dir, toolchain=Toolchain(self.api), host=self.host,
-                             height=size[0], width=size[1], raise_errors=raise_errors)
+        self.clock = FakeClock()
+        if app or args is not None:
+            from .app import build_editor, parse_args, start_editor
+            self.state_dir = state_dir or os.path.join(self.dir, ".lse-state")
+            self.editor = build_editor(cwd=self.dir, host=self.host, height=size[0],
+                                       width=size[1], toolchain=Toolchain(self.api),
+                                       state_dir=self.state_dir, raise_errors=raise_errors)
+            self.editor.clock = self.clock
+            if self.editor.tutor is not None:
+                self.editor.tutor.last_progress = self.clock()
+            if args is not None:
+                start_editor(self.editor, parse_args(list(args)))
+        else:
+            self.editor = Editor(cwd=self.dir, toolchain=Toolchain(self.api), host=self.host,
+                                 height=size[0], width=size[1], raise_errors=raise_errors)
 
     # ----- input --------------------------------------------------------------
 
@@ -95,6 +133,12 @@ class EditorHarness:
         self.type(text)
         return self.press("Enter")
 
+    def idle(self, seconds: float = 0.0) -> "EditorHarness":
+        """Let ``seconds`` pass with no keys (the terminal's idle tick)."""
+        self.clock.advance(seconds)
+        self.editor.idle()
+        return self
+
     # ----- output -------------------------------------------------------------
 
     @property
@@ -115,6 +159,28 @@ class EditorHarness:
     @property
     def command_line(self) -> str:
         return self.screen.region_text("command")
+
+    @property
+    def next_line(self) -> str:
+        """The NEXT line (app mode), without the ``NEXT: `` label."""
+        text = self.screen.region_text("next")
+        return text[len("NEXT: "):] if text.startswith("NEXT: ") else text
+
+    @property
+    def key_bar(self) -> str:
+        return self.screen.region_text("keybar")
+
+    @property
+    def tutor(self):
+        return getattr(self.editor, "tutor", None)
+
+    @property
+    def lesson(self) -> list[str]:
+        """The text rows of the LESSON window as shown (empty if it is not on screen)."""
+        for i, w in enumerate(self.editor.windows):
+            if "lesson" in w.tags:
+                return self.screen.region(f"window{i}")
+        return []
 
     @property
     def buffer(self):

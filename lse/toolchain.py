@@ -32,6 +32,7 @@ class Toolchain:
     def __init__(self, api: Any = None, module: str = "pascal.api") -> None:
         self._api = api
         self._module = module
+        self._patterns: dict[str, Any] = {}
 
     @property
     def api(self) -> Any:
@@ -66,6 +67,32 @@ class Toolchain:
         if explain is not None and _accepts(self.api.run_image, "explain"):
             kw["explain"] = explain
         return self.api.run_image(exe_path, **kw)
+
+    @property
+    def can_match(self) -> bool:
+        """Whether the toolchain can match statement patterns (the tutor needs it)."""
+        return self.available and hasattr(self.api, "find_statements")
+
+    def find_statements(self, ast: Any, pattern: str) -> list[Any]:
+        """Statements in ``ast`` shaped like ``pattern`` (placeholders are wildcards)."""
+        api = self.api
+        parse_statement = getattr(api, "parse_statement", None)
+        nodes = getattr(api, "astnodes", None)
+        if ast is not None and parse_statement is not None and hasattr(nodes, "matches"):
+            if pattern not in self._patterns:
+                self._patterns[pattern] = parse_statement(pattern)
+            pat = self._patterns[pattern]
+            if pat is None:
+                return []
+            return [s for s in ast.statements() if nodes.matches(pat, s)]
+        fn = getattr(api, "find_statements", None)
+        if fn is None:
+            raise ToolchainUnavailable("this Pascal toolchain cannot match statement patterns")
+        return list(fn(ast, pattern))
+
+    def parse_pattern(self, pattern: str) -> Any:
+        fn = getattr(self.api, "parse_statement", None)
+        return fn(pattern) if fn is not None else None
 
     def message(self, facility: str, ident: str) -> Any:
         return self.api.get_message(facility, ident)

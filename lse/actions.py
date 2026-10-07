@@ -766,8 +766,10 @@ def write_file(ed: "Editor", args: Args) -> None:
         _ask_file_name(ed, buf)
 
 
-@command("GOTO FILE", "Open a file, or switch to it if it is already open (Ctrl-O).", "Files",
-         params=(Param("file", "file", required=True, prompt="Open file: "),),
+@command("GOTO FILE", "Open a file, or switch to it if it is already open (Ctrl-O; "
+         "Enter alone goes back to the previous file).", "Files",
+         params=(Param("file", "file", required=True, prompt="Open file: ",
+                       default=lambda ed: ed.previous_file_name()),),
          aliases=("OPEN", "EDIT"))
 def goto_file(ed: "Editor", args: Args) -> None:
     try:
@@ -1106,6 +1108,21 @@ def link_cmd(ed: "Editor", args: Args) -> None:
     do_link(ed, args.get("files"), map_file=args.qual("MAP", True))
 
 
+def run_banner(label: str) -> str:
+    return f"Running {label}. Type your answers and press RETURN. Ctrl-C stops the program."
+
+
+def after_run_banner(result: Any) -> str:
+    """The line shown when the program is done, before going back to the editor."""
+    error = getattr(result, "error", None)
+    if result is None or getattr(error, "ident", "") == "CONTROLC":
+        return "Program stopped. Press RETURN to go back to LSE."
+    if error is not None:
+        return ("Program stopped because of the error above. "
+                "Press RETURN to go back to LSE.")
+    return "Program finished. Press RETURN to go back to LSE."
+
+
 def do_run(ed: "Editor", name: str | None = None, seed: int | None = None,
            input_text: str | None = None) -> bool:
     try:
@@ -1135,16 +1152,15 @@ def _do_run(ed: "Editor", name: str | None, seed: int | None, input_text: str | 
         return False
     label = os.path.basename(exe)
     explain = ed.explain_messages
+    if seed is None:
+        seed = ed.run_seed
     if input_text is not None:
         text_in = input_text.replace("\\n", "\n")
         result = _call(ed, "RUN", lambda: ed.toolchain.run(
             exe, input_text=text_in, seed=seed, explain=explain))
     else:
-        before = (f"Running {label}. Type your answers and press RETURN. "
-                  "Ctrl-C stops the program.")
-        after = "Program finished. Press RETURN to go back to LSE."
         result = _call(ed, "RUN", lambda: ed.host.run_program(
-            before, after,
+            run_banner(label), after_run_banner,
             lambda stdin, stdout: ed.toolchain.run(exe, stdin=stdin, stdout=stdout, seed=seed,
                                                    explain=explain)))
     if result is None:
@@ -1168,8 +1184,17 @@ def _do_run(ed: "Editor", name: str | None, seed: int | None, input_text: str | 
             lines += trace
     out.load_text(lines or ["(the program printed nothing)"])
     if error is not None:
+        if getattr(error, "ident", "") == "CONTROLC":
+            ed.warn("STOPPED", f"{label} was stopped with Ctrl-C; what it printed is in "
+                    "buffer $OUTPUT")
+            return False
+        where = ""
+        if getattr(error, "line", None) and buf is not None and not name:
+            ed.review = Review([error], buf)
+            fill_review_buffer(ed)
+            where = " F8 goes to the line where it stopped."
         ed.show(format_diagnostic(error, ed.explain_messages)
-                + "\n(The output and traceback are in buffer $OUTPUT.)", "E")
+                + f"\n(The output and traceback are in buffer $OUTPUT.{where})", "E")
         return False
     n = len([l for l in (result.output or "").split("\n") if l])
     ed.success("RAN", f"{label} finished (exit status {result.exit_status}); "
@@ -1409,6 +1434,9 @@ def help_indicated(ed: "Editor", args: Args) -> None:
     found = token_at_cursor(ed)
     if found is not None:
         token_help(ed, found[1])
+        return
+    if ed.commands.get("WHAT NOW") is not None:
+        ed.execute("WHAT NOW")
         return
     show_keypad(ed)
 

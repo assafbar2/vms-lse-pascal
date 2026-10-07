@@ -17,6 +17,9 @@ ROLES = (
     "message", "message_warning", "message_error", "message_hint",
     "command", "command_hint", "menu", "menu_selected", "menu_border",
     "help", "help_title", "border", "keytest_ok",
+    "next_label", "next", "next_stuck", "keybar", "keybar_key",
+    "pipeline_done", "pipeline_current", "pipeline_pending", "pipeline_stale", "pipeline_failed",
+    "welcome_title", "welcome_item", "welcome_selected",
 )
 
 _STYLES: dict[str, tuple[str, frozenset[str]]] = {
@@ -39,6 +42,19 @@ _STYLES: dict[str, tuple[str, frozenset[str]]] = {
     "help_title": ("bright", frozenset({"bold"})),
     "border": ("normal", frozenset()),
     "keytest_ok": ("bright", frozenset({"bold"})),
+    "next_label": ("bright", frozenset({"bold"})),
+    "next": ("bright", frozenset()),
+    "next_stuck": ("bright", frozenset({"bold"})),
+    "keybar": ("normal", frozenset()),
+    "keybar_key": ("bright", frozenset({"reverse", "bold"})),
+    "pipeline_done": ("bright", frozenset({"reverse", "bold"})),
+    "pipeline_current": ("bright", frozenset({"reverse", "bold", "underline"})),
+    "pipeline_pending": ("normal", frozenset({"reverse", "dim"})),
+    "pipeline_stale": ("normal", frozenset({"reverse", "dim"})),
+    "pipeline_failed": ("bright", frozenset({"bold"})),
+    "welcome_title": ("bright", frozenset({"bold"})),
+    "welcome_item": ("normal", frozenset()),
+    "welcome_selected": ("bright", frozenset({"reverse", "bold"})),
 }
 
 

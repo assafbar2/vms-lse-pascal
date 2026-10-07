@@ -10,6 +10,7 @@ Extension points for later layers (tutor, NEXT line, key bar):
 
 * ``commands.register(...)`` and ``keymap.bind(...)``
 * ``after_key_hooks``: ``fn(editor, key)`` after every key
+* ``command_hooks``: ``fn(editor, command, args)`` after every command ran
 * ``idle_hooks``: ``fn(editor)`` when the terminal has been quiet a while
 * ``status_providers``: ``fn(editor, window) -> str | None``, extra
   ``[ ... ]`` segments in the middle of each status line
@@ -23,6 +24,7 @@ Extension points for later layers (tutor, NEXT line, key bar):
 from __future__ import annotations
 
 import os
+import time
 import traceback
 from dataclasses import dataclass, field
 from typing import Any, Callable
@@ -41,6 +43,9 @@ from .toolchain import Toolchain, ToolchainUnavailable
 from .windows import MAX_WINDOWS, Window
 
 MAX_MESSAGE_LINES = 5
+
+#: files the toolchain writes; they open read-only (edit the .PAS instead)
+GENERATED_TYPES = (".MAP", ".LIS", ".DIA", ".OBJ", ".EXE", ".OLB")
 
 
 @dataclass
@@ -74,6 +79,12 @@ class BuildState:
     map_path: str | None = None
     ran_state: int | None = None
     run_result: Any = None
+
+    @property
+    def run_ok(self) -> bool | None:
+        if self.run_result is None:
+            return None
+        return getattr(self.run_result, "error", None) is None
 
 
 @dataclass
@@ -136,8 +147,16 @@ class Editor:
         self.builds: dict[str, BuildState] = {}
         self.review: Review | None = None
         self.on_quit: list[Callable[["Editor"], Any]] = []
+        self.clock: Callable[[], float] = time.monotonic
+        #: RANDOM seed for RUN and F5 when no /SEED is given (``lse --seed``)
+        self.run_seed: int | None = None
+        #: the file buffer shown before the current one (Ctrl-O Enter goes back)
+        self.previous_file: Buffer | None = None
 
         self.after_key_hooks: list[Callable[["Editor", str], Any]] = []
+        self.command_hooks: list[Callable[["Editor", Any, Any], Any]] = []
+        #: the tutorial (``lse.tutor``), when that layer is installed
+        self.tutor: Any = None
         self.idle_hooks: list[Callable[["Editor"], Any]] = []
         self.status_providers: list[Callable[["Editor", Window], str | None]] = []
         from .render import command_panel, message_panel
@@ -270,6 +289,11 @@ class Editor:
             self.error("NOTOOLCHAIN", str(e))
         except CommandError as e:
             self.error(e.ident, e.text)
+        for hook in list(self.command_hooks):
+            try:
+                hook(self, cmd, parsed.args)
+            except Exception as e:
+                self._internal_error(e)
         return True
 
     def command_line(self) -> None:
@@ -398,9 +422,16 @@ class Editor:
         new_file = lines is None
         if new_file:
             lines = list(lang.initial_string) if lang and lang.initial_string else [""]
-        buf = Buffer(os.path.basename(base), lines, path=base, version=version, language=lang)
+        generated = os.path.splitext(base)[1].upper() in GENERATED_TYPES
+        buf = Buffer(os.path.basename(base), lines, path=base, version=version, language=lang,
+                     read_only=generated and not new_file)
         self.add_buffer(buf)
         self.show_buffer(buf, window)
+        if buf.read_only:
+            n = len(buf.lines)
+            self.info("READ", f"{n} line{'s' if n != 1 else ''} read from {self.relative(base)} "
+                      "(read-only: the toolchain writes this file)")
+            return buf
         if new_file:
             found = ph.scan(buf.lines)
             first = found[0] if found else None
@@ -421,6 +452,8 @@ class Editor:
         if old is not buf:
             win.top = 0
             win.left = 0
+            if old.path and not old.system:
+                self.previous_file = old
         main = self.buffers.get("MAIN")
         if (main is not None and main is old and main is not buf and not main.path
                 and not main.modified and main.lines == [""]
@@ -433,6 +466,14 @@ class Editor:
         except ValueError:
             return path
         return path if rel.startswith("..") else rel
+
+    def previous_file_name(self) -> str:
+        """Ctrl-O's default: the file shown before this one, if it is still open."""
+        prev = self.previous_file
+        if prev is None or prev is self.buffer or prev.path is None \
+                or self.buffers.get(prev.name) is not prev:
+            return ""
+        return self.relative(prev.path)
 
     def file_buffers(self) -> list[Buffer]:
         return [b for b in self.buffers.values() if not b.system]
