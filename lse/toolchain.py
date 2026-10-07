@@ -52,7 +52,9 @@ class Toolchain:
             return False
         return True
 
-    def parse(self, text: str, filename: str = "<buffer>") -> Any:
+    def parse(self, text: str, filename: str = "<buffer>", *, semantic: bool = True) -> Any:
+        if not semantic and _accepts(self.api.parse_source, "semantic"):
+            return self.api.parse_source(text, filename, semantic=False)
         return self.api.parse_source(text, filename)
 
     def compile(self, path: str, *, list_file: bool = False) -> Any:

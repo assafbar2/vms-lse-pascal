@@ -1188,13 +1188,13 @@ def _do_run(ed: "Editor", name: str | None, seed: int | None, input_text: str | 
             ed.warn("STOPPED", f"{label} was stopped with Ctrl-C; what it printed is in "
                     "buffer $OUTPUT")
             return False
-        where = ""
-        if getattr(error, "line", None) and buf is not None and not name:
+        note = "(The output and traceback are in buffer $OUTPUT.)"
+        line = getattr(error, "line", None)
+        if line and buf is not None and not name:
             ed.review = Review([error], buf)
             fill_review_buffer(ed)
-            where = " F8 goes to the line where it stopped."
-        ed.show(format_diagnostic(error, ed.explain_messages)
-                + f"\n(The output and traceback are in buffer $OUTPUT.{where})", "E")
+            note = f"(F8 goes to line {line}. Output and traceback: buffer $OUTPUT.)"
+        ed.show(format_diagnostic(error, ed.explain_messages) + "\n" + note, "E")
         return False
     n = len([l for l in (result.output or "").split("\n") if l])
     ed.success("RAN", f"{label} finished (exit status {result.exit_status}); "

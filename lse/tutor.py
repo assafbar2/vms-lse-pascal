@@ -91,6 +91,16 @@ class _Context:
         p = self.parsed(tutor)
         return getattr(p, "ast", None) if p is not None else None
 
+    def syntax_errors(self, tutor: "Tutor") -> list[Any]:
+        """Errors that leave the parse tree incomplete (semantic ones do not)."""
+        if not self.errors(tutor):
+            return []
+        p = tutor.parse(self.text, self.state_id, semantic=False)
+        if p is None:
+            return []
+        return [d for d in p.diagnostics if str(getattr(d, "severity", "E")) in "EF"
+                and getattr(d, "ident", "") != "PLACEHOLDER"]
+
     def errors(self, tutor: "Tutor", severities: str = "EF") -> list[Any]:
         """Problems the compiler would report, apart from leftover placeholders."""
         p = self.parsed(tutor)
@@ -152,6 +162,7 @@ class Tutor:
         self.status = StepStatus()
         self._done_count = 0
         self._parse_cache: tuple[int, str, Any] | None = None
+        self._syntax_cache: tuple[int, str, Any] | None = None
         self._durable_cache: dict[tuple[int, int, int], Result] = {}
         self._runs: dict[tuple[int, str, int | None], tuple[bool, str]] = {}
         self._tmp: str | None = None
@@ -380,14 +391,18 @@ class Tutor:
 
     # ----- parsing and checks ---------------------------------------------------
 
-    def parse(self, text: str, state_id: int) -> Any:
-        if self._parse_cache and self._parse_cache[0] == state_id and self._parse_cache[1] == text:
-            return self._parse_cache[2]
+    def parse(self, text: str, state_id: int, *, semantic: bool = True) -> Any:
+        cache = self._parse_cache if semantic else self._syntax_cache
+        if cache and cache[0] == state_id and cache[1] == text:
+            return cache[2]
         try:
-            result = self.ed.toolchain.parse(text, self.path)
+            result = self.ed.toolchain.parse(text, self.path, semantic=semantic)
         except Exception:
             result = None
-        self._parse_cache = (state_id, text, result)
+        if semantic:
+            self._parse_cache = (state_id, text, result)
+        else:
+            self._syntax_cache = (state_id, text, result)
         return result
 
     def _context(self) -> _Context | None:
@@ -566,7 +581,7 @@ class Tutor:
         return None
 
     def _find_regression(self, ctx: _Context) -> tuple[int, Check, str] | None:
-        if self.step.final or ctx.errors(self):
+        if self.step.final or ctx.syntax_errors(self):
             return None
         for k in range(self.index):
             for c in self.lesson.steps[k].all_checks:
@@ -691,16 +706,17 @@ class Tutor:
         if st.current is not None:
             item = step.items[st.current]
             failing = st.failing
+            if buf is not None and failing is not None:
+                special = self._situation_text(buf, failing[0])
+                if special:
+                    return special
             if failing is not None and buf is not None and not self._mistakes_wanted():
                 kind = failing[0].kind
+                err = None
                 if failing[0].durable:
-                    err = self._error_away_from_cursor(buf)
+                    err = self._mistake_text(buf)
                 elif kind in ("COMPILES", "LINKS", "RAN", "RUN_OUTPUT_CONTAINS"):
-                    err = self._error_away_from_cursor(buf, anywhere=True)
-                    if err is None and build_states(ed, buf)["compiled"] == "failed":
-                        err = "F8 goes to the mistake the compiler found; fix it, then F7"
-                else:
-                    err = None
+                    err = self._mistake_text(buf, anywhere=True)
                 if err is not None:
                     return err
             return item.next_text
@@ -708,16 +724,39 @@ class Tutor:
             return f"Almost: {st.failing[1]}. F4 gives a hint"
         return "F2 checks your work"
 
+    def _situation_text(self, buf: "Buffer", failing: Check) -> str:
+        """Advice that depends on where the cursor is, rather than on the lesson text."""
+        if failing.kind == "NO_PLACEHOLDERS":
+            n = ph.count(buf.lines)
+            here = ph.placeholder_at(buf.lines, buf.row, buf.col)
+            if here is not None:
+                return f"Ctrl-K erases {here.text} if it is not needed ({n} left)"
+            return f"Tab goes to the next placeholder ({n} left); Ctrl-K erases one"
+        if failing.durable and ph.count(buf.lines) == 0 and buf.text.strip():
+            ctx = _Context(buf, buf.text, buf.state_id)
+            if ctx.parsed(self) is not None and ctx.ast(self) is None:
+                if self.index == 0:
+                    return ("Ctrl-Z undoes your typing until %{compilation_unit}% is back; "
+                            "then Tab")
+                return "Ctrl-Z undoes your last change: the program must start with PROGRAM"
+        return ""
+
     def _mistakes_wanted(self) -> bool:
         """The step is about making a mistake, so do not point it out."""
         return any(c.kind in ("COMPILE_FAILED", "MADE_ERROR") for c in self.step.all_checks)
 
-    def _error_away_from_cursor(self, buf: "Buffer", anywhere: bool = False) -> str | None:
+    def _mistake_text(self, buf: "Buffer", anywhere: bool = False) -> str | None:
+        """Point at a mistake in the program, unless it is on the line being typed."""
+        compiled_failed = build_states(self.ed, buf)["compiled"] == "failed"
         ctx = _Context(buf, buf.text, buf.state_id)
         for d in ctx.errors(self, "EFW"):
             line = getattr(d, "line", None)
-            if line and (anywhere or line != buf.row + 1):
+            if line and (anywhere or compiled_failed or line != buf.row + 1):
+                if compiled_failed:
+                    return f"F8 goes to the mistake on line {line} ({_headline(d)})"
                 return f"Line {line}: {_headline(d)}. F7, then F8 jumps to it"
+        if compiled_failed:
+            return "F8 goes to the mistake the compiler found; fix it, then F7"
         return None
 
     def describe(self) -> str:

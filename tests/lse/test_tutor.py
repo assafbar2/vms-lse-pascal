@@ -117,7 +117,8 @@ def test_f2_says_what_is_missing(h):
     h.press("F2")
     assert "%LSE-W-NOTYET, 2 of 4 done. Not yet: 2 placeholders still to fill in" in \
         " ".join(h.message.split())
-    assert "NEXT: Ctrl-K erases the placeholder" in " ".join(h.message.split())
+    assert "NEXT: Ctrl-K erases %[declarations]%... if it is not needed (2 left)" in \
+        " ".join(h.message.split())
 
 
 def test_idle_minute_suggests_a_hint(h):

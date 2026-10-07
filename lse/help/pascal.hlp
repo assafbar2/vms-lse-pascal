@@ -121,7 +121,7 @@
 
    + - *        add, subtract, multiply
    /            divide, giving a REAL (7 / 2 is 3.5)
-   DIV  MOD     whole-number divide and remainder (7 DIV 2 is 3, 7 MOD 2 is 1)
+   DIV  MOD     whole-number divide, remainder (7 DIV 2 = 3, 7 MOD 2 = 1)
    = <> < > <= >=   compare, giving TRUE or FALSE
    AND  OR  NOT     combine tests
 

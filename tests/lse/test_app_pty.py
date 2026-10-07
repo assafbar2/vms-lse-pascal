@@ -17,11 +17,13 @@ ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)
 
 
 class Terminal:
-    def __init__(self, cwd, *args, rows=24, cols=80, extra_path=None):
+    def __init__(self, cwd, *args, rows=24, cols=80, extra_path=None, state_dir=None):
         self.master, slave = pty.openpty()
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
         path = os.pathsep.join(filter(None, [extra_path, ROOT]))
-        env = dict(os.environ, TERM="xterm", PYTHONPATH=path, ESCDELAY="25")
+        env = dict(os.environ, TERM="xterm", PYTHONPATH=path, ESCDELAY="25",
+                   LSE_STATE_DIR=str(state_dir or os.path.join(str(cwd), ".lse-state")))
+        env.pop("LSE_SEED", None)
         def make_controlling_terminal():
             os.setsid()
             fcntl.ioctl(0, termios.TIOCSCTTY, 0)  # so Ctrl-C becomes SIGINT, as in a real terminal
@@ -183,6 +185,48 @@ def test_keytest(tmp_path):
     assert "Key test" in term.text
     term.send(b"\x1b[15~")  # F5 as xterm sends it
     term.send(b"\x1b\x1b")
+    assert term.finish() == 0
+
+
+def test_lse_without_a_file_starts_the_tutorial(tmp_path):
+    term = Terminal(tmp_path)
+    term.drain(quiet=1.5)
+    assert "Lesson 1 of 10: Welcome: your first program" in term.text
+    assert "Press Tab to open the menu" in term.text
+    assert "Quit" in term.text
+    for chunk in (TAB, ENTER, b"Guess", TAB):
+        term.send(chunk)
+    assert "Ctrl-K erases" in term.text
+    term.send(CTRL_Q)
+    assert "unsaved changes" in term.text
+    term.send(b"n")
+    assert term.finish() == 0
+    assert "STEP 1 welcome" in (tmp_path / "GUESS.TUT").read_text()
+
+
+def test_tutorial_survives_running_the_program(tmp_path):
+    term = Terminal(tmp_path, rows=30, cols=90)
+    term.drain(quiet=1.5)
+    for chunk in (TAB, ENTER, b"Guess", TAB, CTRL_K, TAB, CTRL_K):
+        term.send(chunk)
+    term.send(b"\x1b[15~", quiet=1.5)  # F5
+    assert "Running GUESS.EXE." in term.text
+    assert "Program finished. Press RETURN to go back to LSE." in term.text
+    term.send(b"\r", quiet=1.0)
+    assert "Lesson 2 of 10: Say something" in term.text
+    term.send(CTRL_Q)
+    assert term.finish() == 0
+    assert "STEP 2 say" in (tmp_path / "GUESS.TUT").read_text()
+
+
+def test_after_the_tutorial_lse_shows_the_welcome_screen(tmp_path):
+    state = tmp_path / "state"
+    state.mkdir()
+    (state / "state").write_text("tutorial_finished = yes\n")
+    term = Terminal(tmp_path, state_dir=state)
+    term.drain(quiet=1.5)
+    assert "Restart the tutorial" in term.text and "Open file" in term.text
+    term.send(b"q")
     assert term.finish() == 0
 
 

@@ -274,7 +274,7 @@ class Editor:
 
             def complete(partial: str, text: str = text) -> Completion:
                 comp = self.commands.complete(f"{text} {partial}", self)
-                return Completion(comp.text[len(text) + 1:], comp.candidates)
+                return Completion(comp.text[len(text) + 1:].rstrip(" "), comp.candidates)
 
             self.prompt(label, submit, initial=initial, completer=complete)
             return True
