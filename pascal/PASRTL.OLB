@@ -1,0 +1,196 @@
+; VMS-LSE Pascal object library: object modules plus an index of their global symbols.
+.LIBRARY   PASRTL
+.TITLE     'Pascal run-time library (PAS$ routines)'
+.CREATED   '7-OCT-2026 00:00:00'
+.INDEX                          ; symbol, module that defines it
+  PAS$WRITE_INT        PAS$IO
+  PAS$WRITE_REAL       PAS$IO
+  PAS$WRITE_BOOL       PAS$IO
+  PAS$WRITE_CHAR       PAS$IO
+  PAS$WRITE_STR        PAS$IO
+  PAS$WRITE_CHARS      PAS$IO
+  PAS$WRITE_ENUM       PAS$IO
+  PAS$WRITELN          PAS$IO
+  PAS$READ_INT         PAS$IO
+  PAS$READ_REAL        PAS$IO
+  PAS$READ_CHAR        PAS$IO
+  PAS$READ_CHARS       PAS$IO
+  PAS$READLN           PAS$IO
+  PAS$EOF              PAS$IO
+  PAS$EOLN             PAS$IO
+  PAS$SQRT             PAS$MATH
+  PAS$SIN              PAS$MATH
+  PAS$COS              PAS$MATH
+  PAS$ARCTAN           PAS$MATH
+  PAS$EXP              PAS$MATH
+  PAS$LN               PAS$MATH
+  PAS$RANDOMIZE        PAS$RANDOM
+  PAS$RANDOM           PAS$RANDOM
+  PAS$RANDOM_REAL      PAS$RANDOM
+  PAS$HALT             PAS$MISC
+
+; VMS-LSE Pascal object module.  Addresses are hexadecimal;
+; frame offsets and counts are decimal.
+.MODULE    PAS$IO
+.KIND      MODULE
+.IDENT     'V1.0'
+.SOURCE    'PASRTL'
+.CREATED   '7-OCT-2026 00:00:00'
+.DATA      0000                 ; cells of static data
+.GLOBALS                        ; symbols defined here for other modules
+  PAS$WRITE_INT        ROUTINE  0000  'PROCEDURE(INTEGER,INTEGER)'
+  PAS$WRITE_REAL       ROUTINE  0002  'PROCEDURE(REAL,INTEGER,INTEGER)'
+  PAS$WRITE_BOOL       ROUTINE  0004  'PROCEDURE(BOOLEAN,INTEGER)'
+  PAS$WRITE_CHAR       ROUTINE  0006  'PROCEDURE(CHAR,INTEGER)'
+  PAS$WRITE_STR        ROUTINE  0008  'PROCEDURE(STRING,INTEGER)'
+  PAS$WRITE_CHARS      ROUTINE  000A  'PROCEDURE(VAR CHARS,INTEGER,INTEGER)'
+  PAS$WRITE_ENUM       ROUTINE  000C  'PROCEDURE(INTEGER,INTEGER,STRING)'
+  PAS$WRITELN          ROUTINE  000E  'PROCEDURE'
+  PAS$READ_INT         ROUTINE  0010  'FUNCTION:INTEGER'
+  PAS$READ_REAL        ROUTINE  0012  'FUNCTION:REAL'
+  PAS$READ_CHAR        ROUTINE  0014  'FUNCTION:CHAR'
+  PAS$READ_CHARS       ROUTINE  0016  'PROCEDURE(VAR CHARS,INTEGER)'
+  PAS$READLN           ROUTINE  0018  'PROCEDURE'
+  PAS$EOF              ROUTINE  001A  'FUNCTION:BOOLEAN'
+  PAS$EOLN             ROUTINE  001C  'FUNCTION:BOOLEAN'
+.EXTERNALS                      ; symbols needed from elsewhere, and where they are used
+.ROUTINES                       ; debug: routine, first and last address, nesting level
+  PAS$WRITE_INT        0000 0001 1
+  PAS$WRITE_REAL       0002 0003 1
+  PAS$WRITE_BOOL       0004 0005 1
+  PAS$WRITE_CHAR       0006 0007 1
+  PAS$WRITE_STR        0008 0009 1
+  PAS$WRITE_CHARS      000A 000B 1
+  PAS$WRITE_ENUM       000C 000D 1
+  PAS$WRITELN          000E 000F 1
+  PAS$READ_INT         0010 0011 1
+  PAS$READ_REAL        0012 0013 1
+  PAS$READ_CHAR        0014 0015 1
+  PAS$READ_CHARS       0016 0017 1
+  PAS$READLN           0018 0019 1
+  PAS$EOF              001A 001B 1
+  PAS$EOLN             001C 001D 1
+.VARIABLES                      ; debug: owning routine (* = static), name, offset, cells
+.CODE
+  0000  NATIVE PAS$WRITE_INT 2              ; run the built-in routine
+  0001  RET
+  0002  NATIVE PAS$WRITE_REAL 3             ; run the built-in routine
+  0003  RET
+  0004  NATIVE PAS$WRITE_BOOL 2             ; run the built-in routine
+  0005  RET
+  0006  NATIVE PAS$WRITE_CHAR 2             ; run the built-in routine
+  0007  RET
+  0008  NATIVE PAS$WRITE_STR 2              ; run the built-in routine
+  0009  RET
+  000A  NATIVE PAS$WRITE_CHARS 3            ; run the built-in routine
+  000B  RET
+  000C  NATIVE PAS$WRITE_ENUM 3             ; run the built-in routine
+  000D  RET
+  000E  NATIVE PAS$WRITELN 0                ; run the built-in routine
+  000F  RET
+  0010  NATIVE PAS$READ_INT 0               ; run the built-in routine
+  0011  RETV
+  0012  NATIVE PAS$READ_REAL 0              ; run the built-in routine
+  0013  RETV
+  0014  NATIVE PAS$READ_CHAR 0              ; run the built-in routine
+  0015  RETV
+  0016  NATIVE PAS$READ_CHARS 2             ; run the built-in routine
+  0017  RET
+  0018  NATIVE PAS$READLN 0                 ; run the built-in routine
+  0019  RET
+  001A  NATIVE PAS$EOF 0                    ; run the built-in routine
+  001B  RETV
+  001C  NATIVE PAS$EOLN 0                   ; run the built-in routine
+  001D  RETV
+.LINES                          ; debug: first address of each source line
+.END
+
+; VMS-LSE Pascal object module.  Addresses are hexadecimal;
+; frame offsets and counts are decimal.
+.MODULE    PAS$MATH
+.KIND      MODULE
+.IDENT     'V1.0'
+.SOURCE    'PASRTL'
+.CREATED   '7-OCT-2026 00:00:00'
+.DATA      0000                 ; cells of static data
+.GLOBALS                        ; symbols defined here for other modules
+  PAS$SQRT             ROUTINE  0000  'FUNCTION(REAL):REAL'
+  PAS$SIN              ROUTINE  0002  'FUNCTION(REAL):REAL'
+  PAS$COS              ROUTINE  0004  'FUNCTION(REAL):REAL'
+  PAS$ARCTAN           ROUTINE  0006  'FUNCTION(REAL):REAL'
+  PAS$EXP              ROUTINE  0008  'FUNCTION(REAL):REAL'
+  PAS$LN               ROUTINE  000A  'FUNCTION(REAL):REAL'
+.EXTERNALS                      ; symbols needed from elsewhere, and where they are used
+.ROUTINES                       ; debug: routine, first and last address, nesting level
+  PAS$SQRT             0000 0001 1
+  PAS$SIN              0002 0003 1
+  PAS$COS              0004 0005 1
+  PAS$ARCTAN           0006 0007 1
+  PAS$EXP              0008 0009 1
+  PAS$LN               000A 000B 1
+.VARIABLES                      ; debug: owning routine (* = static), name, offset, cells
+.CODE
+  0000  NATIVE PAS$SQRT 1                   ; run the built-in routine
+  0001  RETV
+  0002  NATIVE PAS$SIN 1                    ; run the built-in routine
+  0003  RETV
+  0004  NATIVE PAS$COS 1                    ; run the built-in routine
+  0005  RETV
+  0006  NATIVE PAS$ARCTAN 1                 ; run the built-in routine
+  0007  RETV
+  0008  NATIVE PAS$EXP 1                    ; run the built-in routine
+  0009  RETV
+  000A  NATIVE PAS$LN 1                     ; run the built-in routine
+  000B  RETV
+.LINES                          ; debug: first address of each source line
+.END
+
+; VMS-LSE Pascal object module.  Addresses are hexadecimal;
+; frame offsets and counts are decimal.
+.MODULE    PAS$RANDOM
+.KIND      MODULE
+.IDENT     'V1.0'
+.SOURCE    'PASRTL'
+.CREATED   '7-OCT-2026 00:00:00'
+.DATA      0000                 ; cells of static data
+.GLOBALS                        ; symbols defined here for other modules
+  PAS$RANDOMIZE        ROUTINE  0000  'PROCEDURE'
+  PAS$RANDOM           ROUTINE  0002  'FUNCTION(INTEGER):INTEGER'
+  PAS$RANDOM_REAL      ROUTINE  0004  'FUNCTION:REAL'
+.EXTERNALS                      ; symbols needed from elsewhere, and where they are used
+.ROUTINES                       ; debug: routine, first and last address, nesting level
+  PAS$RANDOMIZE        0000 0001 1
+  PAS$RANDOM           0002 0003 1
+  PAS$RANDOM_REAL      0004 0005 1
+.VARIABLES                      ; debug: owning routine (* = static), name, offset, cells
+.CODE
+  0000  NATIVE PAS$RANDOMIZE 0              ; run the built-in routine
+  0001  RET
+  0002  NATIVE PAS$RANDOM 1                 ; run the built-in routine
+  0003  RETV
+  0004  NATIVE PAS$RANDOM_REAL 0            ; run the built-in routine
+  0005  RETV
+.LINES                          ; debug: first address of each source line
+.END
+
+; VMS-LSE Pascal object module.  Addresses are hexadecimal;
+; frame offsets and counts are decimal.
+.MODULE    PAS$MISC
+.KIND      MODULE
+.IDENT     'V1.0'
+.SOURCE    'PASRTL'
+.CREATED   '7-OCT-2026 00:00:00'
+.DATA      0000                 ; cells of static data
+.GLOBALS                        ; symbols defined here for other modules
+  PAS$HALT             ROUTINE  0000  'PROCEDURE'
+.EXTERNALS                      ; symbols needed from elsewhere, and where they are used
+.ROUTINES                       ; debug: routine, first and last address, nesting level
+  PAS$HALT             0000 0001 1
+.VARIABLES                      ; debug: owning routine (* = static), name, offset, cells
+.CODE
+  0000  NATIVE PAS$HALT 0                   ; run the built-in routine
+  0001  RET
+.LINES                          ; debug: first address of each source line
+.END
+
+.ENDLIBRARY
