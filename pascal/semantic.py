@@ -1010,6 +1010,25 @@ class Analyzer:
             return self.binary(e, scope)
         return T.ERROR
 
+    @staticmethod
+    def string_compare_length(left, lt, right, rt) -> int | None:
+        """Length to compare a character array with another one or with a string constant."""
+        def length(e, t):
+            if T.is_char_array(t):
+                return t.count, False
+            cv = getattr(e, "const_value", None)
+            if isinstance(t, T.StringType) and isinstance(cv, str):
+                return len(cv), True
+            if t.base is T.CHAR and isinstance(cv, int):
+                return 1, True
+            return None, False
+        (ln, lconst), (rn, rconst) = length(left, lt), length(right, rt)
+        if ln is None or rn is None:
+            return None
+        if lconst or rconst:
+            return max(ln, rn) if (rn <= ln if rconst else ln <= rn) else None
+        return ln if ln == rn else None
+
     def binary(self, e: A.Binary, scope: Scope) -> T.Type:
         lt = self.expr(e.left, scope)
         rt = self.expr(e.right, scope)
@@ -1050,6 +1069,11 @@ class Analyzer:
                 or (lt.is_ordinal and rt.is_ordinal and lt.base is rt.base)
                 or (isinstance(lt, T.StringType) and isinstance(rt, T.StringType) and lt.length == rt.length)
             )
+            if not ok and (T.is_char_array(lt) or T.is_char_array(rt)):
+                n = self.string_compare_length(e.left, lt, e.right, rt)
+                if n is not None:
+                    e.compare_length = n
+                    ok = True
             if not ok:
                 self.error("INCOMPTYPES", e, op=op, left=str(lt), right=str(rt))
                 return T.ERROR

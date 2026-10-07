@@ -93,6 +93,7 @@ OPCODES: dict[str, tuple[tuple[str, ...], str]] = {
     "NATIVE": ((NAME, INT), "run a built-in run-time routine with n argument cells"),
     "STOP":   ((), "end of the main program"),
     "CASERR": ((), "pop a CASE selector that matched no label; stop with an error"),
+    "LDSTR":  ((INT,), "pop the address of n characters; push them as one string (for comparisons)"),
 }
 
 

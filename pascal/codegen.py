@@ -281,9 +281,19 @@ class CodeGen:
             self.place(end)
             return
         lt, rt = e.left.type, e.right.type
+        n = getattr(e, "compare_length", None)
+        if n is not None:
+            for side in (e.left, e.right):
+                text = self.string_constant(side)
+                if text is not None:
+                    self.emit("LITS", text.ljust(n))
+                else:
+                    self.address(side)
+                    self.emit("LDSTR", n)
         real = (op == "/" or lt is T.REAL or rt is T.REAL) and T.is_numeric(lt) and T.is_numeric(rt)
-        self.expr(e.left)
-        self.expr(e.right)
+        if n is None:
+            self.expr(e.left)
+            self.expr(e.right)
         if real:
             if T.is_integer(lt):
                 self.emit("FLT2")

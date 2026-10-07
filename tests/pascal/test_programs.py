@@ -168,6 +168,25 @@ END."""
     assert out == "<Report    >\n<report    >\n<literal   >\n[Typed here]Typ|\n"
 
 
+def test_comparing_character_arrays(pas):
+    src = """PROGRAM Names(INPUT, OUTPUT);
+TYPE Name = PACKED ARRAY [1..5] OF CHAR;
+VAR a, b : Name;
+BEGIN
+  READLN(a);
+  b := 'Bob';
+  WRITELN(a = 'Bob', a = b, a < 'Carl', 'Bob' = b, a <> 'Bob  ', a > 'B')
+END."""
+    assert pas.output(src, "Bob\n") == "  TRUE  TRUE  TRUE  TRUE FALSE  TRUE\n"
+
+
+def test_string_comparison_errors(idents):
+    decls = "PROGRAM T; VAR a : PACKED ARRAY [1..3] OF CHAR; b : PACKED ARRAY [1..4] OF CHAR; x : BOOLEAN;"
+    assert "INCOMPTYPES" in idents(decls + " BEGIN x := a = b END.")
+    assert "INCOMPTYPES" in idents(decls + " BEGIN x := a = 'toolong' END.")
+    assert idents(decls + " BEGIN x := a = 'ab' END.") == []
+
+
 def test_read_mixed_values(pas):
     src = """PROGRAM Rd(INPUT, OUTPUT);
 VAR a, b : INTEGER; x : REAL; c, d : CHAR;

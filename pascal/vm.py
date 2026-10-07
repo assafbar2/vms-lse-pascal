@@ -32,7 +32,7 @@ OPS = {name: i for i, name in enumerate(OPCODES)}
  OP_FLT2, OP_EQU, OP_NEQ, OP_LES, OP_LEQ, OP_GRT, OP_GEQ, OP_AND, OP_OR, OP_NOT, OP_ABSI,
  OP_ABSR, OP_SQRI, OP_SQRR, OP_ODD, OP_CHR, OP_TRUNC, OP_ROUND, OP_SUCC, OP_PRED, OP_CHK,
  OP_DUP, OP_POP, OP_JMP, OP_JPF, OP_JPT, OP_MARK, OP_CALL, OP_ENTER, OP_RET, OP_RETF, OP_RETV,
- OP_NATIVE, OP_STOP, OP_CASERR) = range(len(OPCODES))
+ OP_NATIVE, OP_STOP, OP_CASERR, OP_LDSTR) = range(len(OPCODES))
 
 
 @dataclass
@@ -387,6 +387,12 @@ class VM:
                 elif op == OP_SBLK:
                     s = pop()
                     M.extend(ord(ch) for ch in s.ljust(a)[:a])
+                elif op == OP_LDSTR:
+                    addr = pop()
+                    cells = M[addr:addr + a]
+                    if None in cells:
+                        raise _Uninit(addr + cells.index(None))
+                    append("".join(map(chr, cells)))
                 elif op == OP_CASERR:
                     raise PascalRuntimeError("CASSELVAL", value=pop())
                 elif op == OP_STOP:
