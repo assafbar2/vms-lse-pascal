@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vms-lse-pascal"
+version = "0.1.0"
+description = "A VAX/VMS LSE-style terminal editor for Pascal, with COMPILE / LINK / RUN"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = ['windows-curses; sys_platform == "win32"']
+
+[project.scripts]
+lse = "lse.app:main"
+
+[tool.setuptools.packages.find]
+include = ["lse*"]
+
+[tool.setuptools.package-data]
+lse = ["languages/*.lse"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
