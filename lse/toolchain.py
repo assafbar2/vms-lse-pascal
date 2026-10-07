@@ -17,7 +17,6 @@ Tests pass a fake module with the same functions (see
 from __future__ import annotations
 
 import importlib
-from types import ModuleType
 from typing import Any
 
 
@@ -78,7 +77,3 @@ def format_diagnostic(diag: Any, explain: bool = True) -> str:
     fac = getattr(diag, "facility", "PASCAL")
     ident = getattr(diag, "ident", "ERROR")
     return f"%{fac}-{sev}-{ident}, {getattr(diag, 'text', diag)}"
-
-
-def is_module(obj: Any) -> bool:
-    return isinstance(obj, ModuleType)

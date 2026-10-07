@@ -72,13 +72,14 @@ def parse_args(argv: list[str] | None) -> argparse.Namespace:
 
 def start_editor(editor, args: argparse.Namespace) -> None:
     """Apply the command-line options to a fresh editor (shared with tests)."""
+    from .commands import quote
     from .overlays import KeyTestOverlay
 
     editor.theme = args.theme
     if args.keytest:
         editor.push_overlay(KeyTestOverlay(on_close=editor.request_quit))
     elif args.file:
-        editor.execute(f'GOTO FILE "{args.file}"')
+        editor.execute(f"GOTO FILE {quote(args.file)}")
     else:
         editor.info("WELCOME", "LSE for Pascal. Ctrl-O opens a file, F1 shows the keys, "
                     "Ctrl-Q quits.")

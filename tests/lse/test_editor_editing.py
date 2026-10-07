@@ -134,6 +134,10 @@ def test_find_and_find_next(tmp_path):
     assert h.cursor == (2, 0)
     h.press("F3")
     assert h.cursor == (0, 6) and "WRAPPED" in h.message
+    h.press("C-f")
+    assert "Find [beta]:" in h.command_line
+    h.press("Enter")
+    assert h.cursor == (1, 0)
     h.command('FIND "Beta"')
     assert h.cursor == (1, 0)
     h.command("FIND nothing-like-this")

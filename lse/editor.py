@@ -146,7 +146,7 @@ class Editor:
             ("command", command_panel),
         ]
         self._message_this_key = False
-        self.languages_errors_reported = False
+        self._language_errors_shown = False
 
     # ----- current window / buffer --------------------------------------------
 
@@ -241,8 +241,13 @@ class Editor:
         if parsed.missing:
             param = parsed.missing[0]
             initial = param.initial(self) if param.initial else ""
+            default = param.default(self) if param.default else ""
+            label = param.prompt or f"_{param.name.capitalize()}: "
+            if default:
+                label = f"{label.rstrip(': ')} [{default}]: "
 
             def submit(value: str, text: str = text) -> None:
+                value = value if value.strip() else default
                 if value.strip() == "":
                     self.info("CANCELLED", f"{parsed.command.name} cancelled")
                     return
@@ -252,8 +257,7 @@ class Editor:
                 comp = self.commands.complete(f"{text} {partial}", self)
                 return Completion(comp.text[len(text) + 1:], comp.candidates)
 
-            self.prompt(param.prompt or f"_{param.name.capitalize()}: ", submit,
-                        initial=initial, completer=complete)
+            self.prompt(label, submit, initial=initial, completer=complete)
             return True
         cmd = parsed.command
         if cmd.typing:
@@ -302,6 +306,8 @@ class Editor:
 
     def placeholder_hint(self) -> str | None:
         buf = self.buffer
+        if buf.read_only:
+            return None
         found = ph.placeholder_at(buf.lines, buf.row, buf.col)
         if found is None:
             return None
@@ -379,6 +385,16 @@ class Editor:
             return existing
         base, lines, version = files.load(path)
         lang = self.languages.for_file(base)
+        buf = self._load_buffer(base, lines, version, lang, window)
+        if self.languages.errors and not self._language_errors_shown:
+            self._language_errors_shown = True
+            self.messages_buffer.append_line("\n".join(self.languages.errors))
+            self.warn("LANGDEF", "a language definition file has errors, so some templates "
+                      "are missing: " + self.languages.errors[0])
+        return buf
+
+    def _load_buffer(self, base: str, lines: list[str] | None, version: int | None,
+                     lang: Language | None, window: Window | None) -> Buffer:
         new_file = lines is None
         if new_file:
             lines = list(lang.initial_string) if lang and lang.initial_string else [""]

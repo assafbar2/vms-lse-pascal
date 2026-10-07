@@ -47,6 +47,8 @@ class Param:
     choices: list[str] | Callable[["Editor"], list[str]] | None = None
     initial: Callable[["Editor"], str] | None = None
     completer: Completer | None = None
+    #: value used when the user just presses Enter at the prompt (shown as [default])
+    default: Callable[["Editor"], str] | None = None
 
     def choice_list(self, editor: "Editor") -> list[str]:
         if callable(self.choices):

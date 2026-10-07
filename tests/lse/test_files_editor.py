@@ -127,6 +127,17 @@ def test_purge(hello):
     assert hello.ls() == ["HELLO.PAS", "HELLO.PAS;4"]
 
 
+def test_broken_language_file_is_reported(tmp_path):
+    from lse.editor import Editor
+    from lse.langdef import LanguageRegistry
+    langs = tmp_path / "langs"
+    langs.mkdir()
+    (langs / "bad.lse").write_text("DEFINE LANGUAGE BAD\n/FILE_TYPES=(.BAD)\n")
+    ed = Editor(cwd=str(tmp_path), languages=LanguageRegistry(str(langs)), raise_errors=True)
+    ed.open_file("X.BAD")
+    assert "%LSE-W-LANGDEF" in ed.message.text and "has no END DEFINE" in ed.message.text
+
+
 def test_missing_version_is_an_error(hello):
     hello.command("GOTO FILE HELLO.PAS;7")
     assert "FILENOTFOUND" in hello.message

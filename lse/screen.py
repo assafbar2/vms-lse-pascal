@@ -143,7 +143,7 @@ class CursesScreen:
             value = 0
             if self.has_colors:
                 value |= curses.color_pair(1 if fg == "normal" else 2)
-            elif fg == "bright":
+            if fg == "bright" and (not self.has_colors or curses.COLORS < 16):
                 value |= curses.A_BOLD
             for a in attrs:
                 value |= getattr(curses, _ATTRS[a], 0)

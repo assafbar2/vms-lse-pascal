@@ -9,7 +9,7 @@ from typing import TYPE_CHECKING, Any, Callable
 from . import files
 from . import placeholders as ph
 from .buffer import Buffer
-from .commands import Args, Command, Param, Qualifier, complete_files, quote
+from .commands import Args, Command, Param, Qualifier, complete_files
 from .editor import Review
 from .keys import describe_key
 from .langdef import MenuOption, PlaceholderDef
@@ -315,7 +315,7 @@ def _search(ed: "Editor", text: str, forward: bool) -> None:
 
 @command("FIND", "Search for text (lower-case text matches any case).", "Editing",
          params=(Param("text", "rest", required=True, prompt="Find: ",
-                       initial=lambda ed: ed.last_search),),
+                       default=lambda ed: ed.last_search),),
          quals=(Qualifier("REVERSE"), Qualifier("FORWARD")), aliases=("SEARCH",))
 def find(ed: "Editor", args: Args) -> None:
     ed.last_search = args["text"]

@@ -41,6 +41,7 @@ import tempfile
 from dataclasses import dataclass, field
 from typing import Any
 
+from .commands import quote
 from .editor import Editor
 from .host import HeadlessHost
 from .keys import normalize_key, parse_keys
@@ -64,7 +65,7 @@ class EditorHarness:
 
     def open(self, name: str) -> "EditorHarness":
         """Open a file as ``lse NAME`` would."""
-        self.editor.execute(f'GOTO FILE "{name}"')
+        self.editor.execute(f"GOTO FILE {quote(name)}")
         return self
 
     def feed(self, spec: str) -> "EditorHarness":
@@ -365,7 +366,7 @@ class FakePascalApi:
             if "DIVBYZERO" in line:
                 err = self._diag(source, n, None, "PAS", "DIVBYZERO")
                 return RunResult(2, "".join(out), err,
-                                 [f"%TRACE-F-TRACEBACK, symbolic stack dump follows",
+                                 ["%TRACE-F-TRACEBACK, symbolic stack dump follows",
                                   f"  module FAKE  line {n}"])
             for m in _IO.finditer(line):
                 kind = m.group(1).upper()
