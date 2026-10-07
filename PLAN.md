@@ -3,7 +3,7 @@ name: LSE-style Pascal Editor
 overview: 'Build a terminal editor modeled on VAX/VMS LSE: modern keybindings with VT100/VT220 styling, Pascal templates and placeholders, and a complete Pascal toolchain (COMPILE to object, symbolic LINK to image, RUN on a p-code virtual machine) driven from inside the editor.'
 todos:
   - id: scaffold
-    content: 'Scaffold project: pyproject.toml, lse/ and pascal/ packages, README, pytest setup'
+    content: 'Scaffold project: pyproject.toml (windows-curses on Windows only, lse entry point for pipx/uv tool install), lse/ and pascal/ packages, README, pytest setup'
     status: pending
   - id: frontend
     content: 'Pascal lexer, recursive-descent parser, AST, semantic analysis with VMS-style diagnostics (.DIA, .LIS)'
@@ -51,7 +51,7 @@ todos:
     content: 'next_action(state) engine + NEXT line, pipeline indicator, F-key label bar, WHAT NOW command; invariant test that it never returns empty'
     status: pending
   - id: welcome-exits
-    content: 'Welcome screen (Tutorial / New / Open / Quit), always-visible quit, RUN banners before and after the program, friendly bad-input handling in READLN'
+    content: 'Launch flow: tutorial auto-starts on no-arg launch (resume from ~/.lse/state and GUESS.TUT), welcome screen after it is finished, --no-tutorial; always-visible quit, RUN banners before and after the program, friendly bad-input handling in READLN'
     status: pending
   - id: key-fallbacks
     content: 'Key fallbacks for terminals that steal keys (Esc+digit = F-key, every action on the command line with Tab completion), raw mode so Ctrl-S/Ctrl-Q are not flow control, lse --keytest'
@@ -74,8 +74,12 @@ isProject: false
 - **Language supported:** a teaching-sized Pascal subset, roughly Wirth's Pascal-S plus VAX Pascal-style `MODULE` for separate compilation.
 - **Keys and look:** modern keybindings with a VT100/VT220 look and feel.
 - **Toolchain:** real COMPILE, then LINK (symbolic), then RUN, all usable from inside the editor and from a shell.
-- **Stack (assumed):** Python 3.11+, standard library `curses`, no runtime dependencies. Tests use `pytest`.
+- **Stack (confirmed):** Python 3.11+ with the standard library `curses`. There are no runtime dependencies on Linux and macOS; Windows needs `windows-curses`, declared as a dependency for Windows only. Tests use `pytest`.
+  - Why Python: speed doesn't matter for an editor and a teaching compiler, and Python keeps the compiler, linker and VM readable for learners who want to look at how they work.
+  - Its weak spot is installing for beginners, who need Python first. Mitigations: one-command install with `pipx install` or `uv tool install`, and optional single-file executables built later with PyInstaller.
+  - Go would give a single binary out of the box, but at the cost of that readability, so it isn't clearly better here.
 - **Audience:** people who don't know Pascal. The editor teaches lightly as you go and includes a guided first program, "Guess My Number", which takes the user from an empty file to a game they compile, link, run and play.
+- **Tutorial starts immediately:** running `lse` with no arguments goes straight into the tutorial, with no menu in front of it. It resumes at the saved step if one exists. See "Getting in" below.
 
 ## Architecture
 
@@ -259,7 +263,7 @@ END DEFINE
 
 **2. Guided first program: "Guess My Number"**
 
-- Start it with `lse --tutorial`, the `TUTORIAL` command, or the welcome screen shown on first launch.
+- The tutorial starts immediately when `lse` runs without a file name. It can also be started with `lse --tutorial` or the `TUTORIAL` command.
 - The screen splits in two. The top window is the user's own `GUESS.PAS`. The bottom is a bordered LESSON window showing the current step: what this piece of Pascal is, what to type or expand, and why.
 - Each step has a check that runs automatically after edits (or with F2) and moves on to the next step once it passes. A check can test the parsed program (for example "a VAR section declares `secret : INTEGER`"), that the file compiles, that it links, or that the program's output contains given text.
 - F4 shows a hint. "Show me" inserts the step's answer, so nobody gets stuck.
@@ -369,7 +373,11 @@ Design rule: at every moment the screen answers "what do I do next?" without the
 
 **Getting in, getting out, and running the program**
 
-- **First launch** shows a welcome screen with four choices: "Learn Pascal: build a Guess My Number game", "New file", "Open file" and "Quit". The arrow keys and Enter work there.
+- **Launching:**
+  - `lse` with no arguments, tutorial not finished: the tutorial starts immediately. It opens on step 1, "Welcome", or resumes at the saved step, and `GUESS.PAS` is already open in the top window. From the first screen the lesson says how to quit (Ctrl-Q) and how to just edit (`TUTORIAL OFF`).
+  - `lse FILE.PAS`: opens the file directly, since naming a file means the user knows what they want. The NEXT line offers "Type TUTORIAL to learn Pascal step by step".
+  - `lse` with no arguments, tutorial finished: shows a welcome screen with Resume or restart tutorial, New file, Open file and Quit, using the arrow keys and Enter.
+  - `lse --no-tutorial` skips the tutorial. Whether it has been finished is recorded in `~/.lse/state`.
 - **Quitting** is always visible (`^Q Quit` in the key bar) and asks before discarding changes, so nobody gets trapped the way people do in vi.
 - **RUN** shows a banner first: "Running GUESS.EXE. Type your answers and press RETURN. Ctrl-C stops the program." Afterwards it shows: "Program finished. Press RETURN to go back to LSE."
 - If the player types a letter where a number is expected, the runtime prints the VMS message with a plain explanation and asks again, so the program doesn't crash. The tutorial mentions this as a teaching moment.
