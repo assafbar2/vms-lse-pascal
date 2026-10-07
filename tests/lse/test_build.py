@@ -162,6 +162,24 @@ def test_toolchain_missing_is_a_friendly_error(tmp_path):
     assert "%LSE-E-NOTOOLCHAIN" in h.message
 
 
+def test_toolchain_crash_becomes_a_message(hello):
+    def boom(path, *, list_file=False):
+        raise RuntimeError("compiler bug")
+    hello.api.compile_file = boom
+    hello.press("F5")
+    assert "%LSE-F-TOOLFAIL, COMPILE stopped with an internal error" in hello.message
+    assert "compiler bug" in "\n".join(hello.editor.messages_buffer.lines)
+    hello.type("still editing")
+    assert hello.lines[0].startswith("still editing")
+
+
+def test_link_and_run_reject_names_that_are_not_files(hello):
+    hello.command("LINK .")
+    assert "NOFILE" in hello.message
+    hello.command("RUN NOPE")
+    assert "NOIMAGE" in hello.message
+
+
 def test_adapter_uses_the_contract_signatures():
     calls = []
     api = types.SimpleNamespace(

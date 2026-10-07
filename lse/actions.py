@@ -15,7 +15,7 @@ from .keys import describe_key
 from .langdef import MenuOption, PlaceholderDef
 from .overlays import KeyTestOverlay, MenuItem
 from .themes import THEMES, theme_names
-from .toolchain import format_diagnostic
+from .toolchain import ToolchainUnavailable, format_diagnostic
 
 if TYPE_CHECKING:
     from .editor import Editor
@@ -927,7 +927,32 @@ def fill_review_buffer(ed: "Editor") -> Buffer:
     return rv
 
 
+class _ToolchainFailed(Exception):
+    pass
+
+
+def _call(ed: "Editor", what: str, fn: Callable[[], Any]) -> Any:
+    """Call the toolchain; a crash in it becomes a message, not an editor crash."""
+    try:
+        return fn()
+    except ToolchainUnavailable:
+        raise
+    except Exception as e:
+        import traceback
+        ed.messages_buffer.append_line(traceback.format_exc())
+        ed.show(f"%LSE-F-TOOLFAIL, {what} stopped with an internal error: "
+                f"{type(e).__name__}: {e} (details in buffer $MESSAGES)", "F")
+        raise _ToolchainFailed() from e
+
+
 def do_compile(ed: "Editor", list_file: bool = False) -> bool:
+    try:
+        return _do_compile(ed, list_file)
+    except _ToolchainFailed:
+        return False
+
+
+def _do_compile(ed: "Editor", list_file: bool) -> bool:
     buf = source_buffer(ed)
     if buf is None:
         ed.error("NOSOURCE", "there is no Pascal file to compile; open one with Ctrl-O")
@@ -937,7 +962,7 @@ def do_compile(ed: "Editor", list_file: bool = False) -> bool:
         return False
     if buf.modified:
         buf.save()
-    result = ed.toolchain.compile(buf.path, list_file=list_file)
+    result = _call(ed, "COMPILE", lambda: ed.toolchain.compile(buf.path, list_file=list_file))
     st = ed.build_for(buf)
     st.compiled_state = buf.state_id
     st.compile_ok = bool(result.ok)
@@ -977,11 +1002,28 @@ def _resolve_many(ed: "Editor", text: str, default_type: str) -> list[str]:
     return [files.resolve_name(ed.cwd, n, default_type=default_type) for n in names]
 
 
+def _missing_files(ed: "Editor", paths: list[str], what: str, maker: str) -> bool:
+    for p in paths:
+        if not os.path.isfile(p):
+            ed.error("NOFILE", f"{ed.relative(p)} is not {what}; {maker} makes it")
+            return True
+    return False
+
+
 def do_link(ed: "Editor", names: str | None = None, map_file: bool = True) -> bool:
+    try:
+        return _do_link(ed, names, map_file)
+    except _ToolchainFailed:
+        return False
+
+
+def _do_link(ed: "Editor", names: str | None, map_file: bool) -> bool:
     buf = source_buffer(ed)
     st = ed.build_for(buf) if buf is not None else None
     if names:
         objs = _resolve_many(ed, names, ".OBJ")
+        if not objs or _missing_files(ed, objs, "an object file", "COMPILE"):
+            return False
     else:
         if buf is None or st is None:
             ed.error("NOSOURCE", "there is no program to link; open a .PAS file first")
@@ -995,7 +1037,7 @@ def do_link(ed: "Editor", names: str | None = None, map_file: bool = True) -> bo
                      "(F8 goes to them), then F7.")
             return False
         objs = [st.obj_path or os.path.splitext(buf.path or buf.name)[0] + ".OBJ"]
-    result = ed.toolchain.link(objs, map_file=map_file)
+    result = _call(ed, "LINK", lambda: ed.toolchain.link(objs, map_file=map_file))
     diags = list(result.diagnostics or [])
     if st is not None and not names:
         st.linked_state = st.compiled_state
@@ -1032,10 +1074,21 @@ def link_cmd(ed: "Editor", args: Args) -> None:
 
 def do_run(ed: "Editor", name: str | None = None, seed: int | None = None,
            input_text: str | None = None) -> bool:
+    try:
+        return _do_run(ed, name, seed, input_text)
+    except _ToolchainFailed:
+        return False
+
+
+def _do_run(ed: "Editor", name: str | None, seed: int | None, input_text: str | None) -> bool:
     buf = source_buffer(ed)
     st = ed.build_for(buf) if buf is not None else None
     if name:
-        exe = _resolve_many(ed, name, ".EXE")[0]
+        found = _resolve_many(ed, name, ".EXE")
+        if not found:
+            ed.error("NOIMAGE", "RUN needs the name of a program image, e.g. RUN GUESS")
+            return False
+        exe = found[0]
     else:
         if st is None or not st.link_ok or not st.exe_path:
             what = buf.name if buf is not None else "The program"
@@ -1043,19 +1096,20 @@ def do_run(ed: "Editor", name: str | None = None, seed: int | None = None,
                      "link and run it.")
             return False
         exe = st.exe_path
-    if not os.path.exists(exe):
+    if not os.path.isfile(exe):
         ed.error("NOIMAGE", f"{ed.relative(exe)} does not exist; LINK makes it")
         return False
     label = os.path.basename(exe)
     if input_text is not None:
-        result = ed.toolchain.run(exe, input_text=input_text.replace("\\n", "\n"), seed=seed)
+        text_in = input_text.replace("\\n", "\n")
+        result = _call(ed, "RUN", lambda: ed.toolchain.run(exe, input_text=text_in, seed=seed))
     else:
         before = (f"Running {label}. Type your answers and press RETURN. "
                   "Ctrl-C stops the program.")
         after = "Program finished. Press RETURN to go back to LSE."
-        result = ed.host.run_program(
+        result = _call(ed, "RUN", lambda: ed.host.run_program(
             before, after,
-            lambda stdin, stdout: ed.toolchain.run(exe, stdin=stdin, stdout=stdout, seed=seed))
+            lambda stdin, stdout: ed.toolchain.run(exe, stdin=stdin, stdout=stdout, seed=seed)))
     if result is None:
         ed.warn("INTERRUPTED", f"{label} was stopped with Ctrl-C")
         return False
