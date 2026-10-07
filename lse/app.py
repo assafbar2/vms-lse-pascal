@@ -95,7 +95,7 @@ def _run(stdscr, args: argparse.Namespace) -> None:
     last = time.monotonic()
     while not editor.quit_requested:
         screen.apply_theme(editor.theme)
-        screen.draw(editor.render())
+        screen.draw(editor.render(), editor.line_drawing)
         key = screen.read_key(ESC_WAIT_MS if editor.decoder.waiting else IDLE_MS)
         now = time.monotonic()
         if key is None:

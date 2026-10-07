@@ -393,6 +393,33 @@ def expand_token(ed: "Editor") -> bool:
     return True
 
 
+def finish_list_item(ed: "Editor") -> bool:
+    """After typing over a vertical list placeholder, add the separator and a
+    fresh copy of the placeholder on the next line (what expanding would do)."""
+    ot = ed.overtyped
+    buf = ed.buffer
+    lang = buf.language
+    if ot is None or ot.buffer is not buf or ot.row != buf.row or lang is None:
+        return False
+    line = buf.current_line()
+    if buf.col <= ot.col or line[buf.col:].strip():
+        return False
+    old = ot.placeholder
+    typed = line[ot.col:buf.col].rstrip()
+    if not typed:
+        return False
+    stand_in = ph.Placeholder(buf.row, ot.col, buf.col, old.name, old.optional, old.is_list)
+    dup = ph.duplication_for(stand_in, lang.placeholder(old.name), line)
+    if dup is None or not dup.vertical:
+        return False
+    if dup.separator.strip() and typed.endswith(dup.separator.strip()):
+        dup = ph.Duplication(dup.text, "", True)
+    row = buf.row
+    _apply(ed, buf, row, ot.col, buf.col, [typed], dup)
+    buf.set_cursor(row + 1, len(ph.base_indent(buf.lines[row], ot.col)))
+    return True
+
+
 def expand_placeholder(ed: "Editor", cur: ph.Placeholder) -> None:
     buf = ed.buffer
     lang = buf.language
@@ -481,8 +508,9 @@ def _goto_placeholder(ed: "Editor", forward: bool) -> bool:
     return True
 
 
-@command("TAB", "Expand the template word or placeholder at the cursor; "
-         "otherwise go to the next placeholder (Tab).", "Placeholders")
+@command("TAB", "Expand the template word or placeholder at the cursor; after typing over "
+         "a list placeholder, start the next item; otherwise go to the next placeholder (Tab).",
+         "Placeholders")
 def tab(ed: "Editor", args: Args) -> None:
     buf = ed.buffer
     lang = buf.language
@@ -495,6 +523,8 @@ def tab(ed: "Editor", args: Args) -> None:
             _goto_placeholder(ed, True)
         return
     if expand_token(ed):
+        return
+    if finish_list_item(ed):
         return
     if ph.scan(buf.lines):
         _goto_placeholder(ed, True)
@@ -1378,6 +1408,18 @@ def help_indicated(ed: "Editor", args: Args) -> None:
 def set_theme(ed: "Editor", args: Args) -> None:
     ed.theme = args["theme"]
     ed.info("THEME", f"theme is now {ed.theme} ({THEMES[ed.theme].description})")
+
+
+LINE_DRAWINGS = ["ACS", "UNICODE", "ASCII"]
+
+
+@command("SET LINE_DRAWING", "How boxes are drawn: ACS (DEC graphics), UNICODE or ASCII; "
+         "use ASCII if borders look like lqqqk.", "Help",
+         params=(Param("style", "choice", required=True, prompt="Line drawing (ACS, UNICODE, ASCII): ",
+                       choices=LINE_DRAWINGS),))
+def set_line_drawing(ed: "Editor", args: Args) -> None:
+    ed.line_drawing = args["style"]
+    ed.info("LINEDRAWING", f"boxes are now drawn with {ed.line_drawing} characters")
 
 
 @command("KEYTEST", "Show which keys reach LSE (same as lse --keytest).", "Help")

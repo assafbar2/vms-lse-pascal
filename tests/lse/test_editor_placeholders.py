@@ -85,6 +85,31 @@ def test_typed_word_then_tab_expands_and_keeps_list(h):
                             "  %[statement]%..."]
 
 
+def test_tab_after_typing_a_statement_starts_the_next_one(h):
+    new_program(h)
+    h.feed("<C-k><Tab>x := 1<Tab>")
+    assert h.lines[2:4] == ["  x := 1;", "  %[statement]%..."]
+    assert h.cursor == (3, 2)
+    h.feed("y := 2;<Tab>")  # a semicolon typed by hand is not doubled
+    assert h.lines[3:5] == ["  y := 2;", "  %[statement]%..."]
+    h.feed("<C-k>")
+    assert h.lines[1:] == ["BEGIN", "  x := 1;", "  y := 2", "END."]
+
+
+def test_tab_after_typing_a_horizontal_list_just_moves_on(h):
+    new_program(h)
+    h.feed("<Tab><Enter>a, b<Tab>")
+    assert h.lines[2] == "  a, b : %{type}%;"
+    assert ph.placeholder_at(h.lines, *h.cursor).name == "type"
+
+
+def test_list_item_is_not_finished_after_moving_away(h):
+    new_program(h)
+    h.feed("<C-k><Tab>x := 1<Enter>y := 2<Tab>")
+    assert [line.rstrip() for line in h.lines[2:4]] == ["  x := 1", "  y := 2"]
+    assert ph.count(h.lines) == 0
+
+
 def test_else_if_chain_like_guess(h):
     new_program(h)
     h.feed("<C-k><Tab>IF<Tab>a<Tab>WRITELN<Tab>'low'<Tab>")

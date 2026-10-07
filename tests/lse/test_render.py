@@ -141,6 +141,31 @@ def test_keypad_fits_80_columns(hello):
     assert widths == {37}
 
 
+def test_bordered_fixed_height_window_for_panes(hello):
+    from lse.buffer import Buffer
+    ed = hello.editor
+    pane = Buffer("$LESSON", ["DO THIS: press Tab", "YOU WILL SEE: a menu"], read_only=True,
+                  system=True)
+    win = ed.split(pane, fixed_height=5)
+    win.border, win.title, win.show_status = True, "Lesson 1 of 10: Welcome", False
+    scr = hello.screen
+    rows = scr.regions["window1"]
+    assert len(rows) == 3
+    top = rows[0] - 1
+    assert scr.line(top).startswith("┌─[ Lesson 1 of 10: Welcome ]")
+    assert scr.line(rows[0]) == "│DO THIS: press Tab" + " " * 60 + "│"
+    assert "status1" not in scr.regions
+    assert scr.regions["status0"] == [top - 1]
+    assert ed.current_window == 0 and scr.cursor == (0, 0)
+
+
+def test_set_line_drawing(hello):
+    hello.command("SET LINE_DRAWING ASCII")
+    assert hello.editor.line_drawing == "ASCII"
+    hello.command("SET LINE_DRAWING uni")
+    assert hello.editor.line_drawing == "UNICODE"
+
+
 def test_keytest_overlay(h):
     h.command("KEYTEST")
     assert isinstance(h.overlay, KeyTestOverlay)

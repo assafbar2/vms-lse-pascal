@@ -125,6 +125,7 @@ class Editor:
         self.insert_mode = True
         self.direction = "FORWARD"
         self.theme = DEFAULT_THEME
+        self.line_drawing = os.environ.get("LSE_LINE_DRAWING", "ACS").upper()
         self.explain_messages = True
         self.quit_requested = False
         self.last_search = ""

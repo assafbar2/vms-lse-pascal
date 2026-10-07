@@ -11,7 +11,7 @@ import curses
 from typing import Callable
 
 from .themes import ROLES, get_theme
-from .vscreen import VirtualScreen
+from .vscreen import BOX_TO_ASCII, VirtualScreen
 
 _FIXED_CODES: dict[int, str] = {
     9: "Tab", 10: "Enter", 13: "Enter", 27: "Esc", 127: "Backspace", 8: "Backspace",
@@ -151,19 +151,28 @@ class CursesScreen:
         if self.has_colors:
             self.stdscr.bkgd(" ", curses.color_pair(1))
 
-    def draw(self, scr: VirtualScreen) -> None:
+    def draw(self, scr: VirtualScreen, line_drawing: str = "ACS") -> None:
+        """Copy the virtual screen to the terminal.
+
+        ``line_drawing``: ``ACS`` (DEC Special Graphics, the default),
+        ``UNICODE`` (box characters as text) or ``ASCII`` (``+ - |``), for
+        terminals whose DEC graphics show up as ``lqqk``.
+        """
         win = self.stdscr
         h, w = win.getmaxyx()
         win.erase()
+        acs_map = self._acs if line_drawing == "ACS" else {}
         for row in range(min(h, scr.height)):
             for col, text, role in scr.runs(row):
                 if col >= w:
                     break
                 attr = self._attr.get(role, 0)
                 text = text[: w - col]
+                if line_drawing == "ASCII":
+                    text = text.translate(BOX_TO_ASCII)
                 start = 0
                 for i, ch in enumerate(text):
-                    acs = self._acs.get(ch)
+                    acs = acs_map.get(ch)
                     if acs is None:
                         continue
                     if i > start:
