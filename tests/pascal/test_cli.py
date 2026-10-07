@@ -106,13 +106,10 @@ def test_usage_errors(capsys):
     assert cli.main(["FROB"]) == 2
 
 
-@pytest.mark.skipif(shutil.which("pascal") is None, reason="package not installed")
+@pytest.mark.skipif(shutil.which("paslink") is None, reason="package not installed")
 def test_installed_entry_points(pas):
     pas.copy_example("HELLO")
     assert subprocess.run(["pascal", "HELLO"], cwd=pas.dir).returncode == 0
-    for linker in ("paslink", "link"):
-        if shutil.which(linker) and "/.local/" in shutil.which(linker) or linker == "paslink":
-            assert subprocess.run([linker, "HELLO"], cwd=pas.dir).returncode == 0
-            break
+    assert subprocess.run(["paslink", "HELLO"], cwd=pas.dir).returncode == 0
     r = subprocess.run(["pasrun", "HELLO"], cwd=pas.dir, capture_output=True, text=True)
     assert r.stdout == "Hello, world!\n"

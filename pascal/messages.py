@@ -19,15 +19,6 @@ import string
 import textwrap
 from dataclasses import dataclass, field
 
-SEVERITIES = ("S", "I", "W", "E", "F")
-SEVERITY_NAMES = {
-    "S": "success",
-    "I": "informational",
-    "W": "warning",
-    "E": "error",
-    "F": "fatal error",
-}
-
 
 @dataclass
 class MessageInfo:
@@ -594,15 +585,6 @@ def diag(facility: str, ident: str, *, file: str | None = None, line: int | None
     return Diagnostic(file=file, line=line, column=column, severity=info.severity,
                       facility=info.facility, ident=info.ident, text=text,
                       explanation=info.explanation, hint=hint, end_column=end_column)
-
-
-def worst_severity(diags) -> str | None:
-    order = {s: i for i, s in enumerate(SEVERITIES)}
-    worst = None
-    for d in diags:
-        if worst is None or order[d.severity] > order[worst]:
-            worst = d.severity
-    return worst
 
 
 def has_errors(diags) -> bool:

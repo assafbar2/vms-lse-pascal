@@ -86,7 +86,7 @@ def test_semantic_errors(body, ident):
     ("VAR x : STRING;", "NOTSUPP"),
     ("CONST c = 1; VAR x : c;", "NOTTYPE"),
     ("TYPE T = 10..1;", "BADRANGE"),
-    ("VAR n : INTEGER; TYPE T = 1..n;", "NOTCONST" if False else "CONSTEXPR"),
+    ("VAR n : INTEGER; TYPE T = 1..n;", "CONSTEXPR"),
     ("TYPE T = ARRAY [REAL] OF INTEGER;", "NOTORDINAL"),
     ("FUNCTION F(x : INTEGER) : INTEGER; BEGIN END;", "NORESULT"),
     ("TYPE V = ARRAY [1..2] OF INTEGER; FUNCTION F : V; BEGIN END;", "FUNCTYPE"),

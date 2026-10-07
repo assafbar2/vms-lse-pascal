@@ -95,12 +95,11 @@ def link_files(obj_paths: list[str], *, output: str | None = None, map_file: boo
     diags.extend(link_diags)
     map_path = output_name(exe_path, ".MAP") if map_file else None
     if image is None:
-        for stale in (exe_path,):
-            try:
-                if stale.exists():
-                    stale.unlink()
-            except OSError:
-                pass
+        try:
+            if exe_path.exists():
+                exe_path.unlink()
+        except OSError:
+            pass
         return LinkOutcome(False, diags)
     try:
         exe_path.write_text(write_image(image))

@@ -454,7 +454,7 @@ class CodeGen:
             self.range_check(tt, value)
             self.emit("STO")
 
-    def store_result_of(self, target: A.Expr, produce, conversion: str | None = None):
+    def store_result_of(self, target: A.Expr, produce):
         """Store a value produced by ``produce()`` (e.g. a READ) into ``target``."""
         tt = target.type
         if self.is_simple_var(target):
