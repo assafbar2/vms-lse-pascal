@@ -433,6 +433,10 @@ class CommandRegistry:
         all_cands = sorted(cands | param_cands, key=str.upper)
         if not all_cands:
             return Completion(text, [])
+        command_toks = words_done if cands and not param_cands else words_done[:nwords]
+        for t in command_toks:
+            if not t.quoted and t.end <= len(prefix_text):
+                prefix_text = prefix_text[:t.start] + t.value.upper() + prefix_text[t.end:]
         if len(all_cands) == 1:
             only = all_cands[0]
             tail = "" if only.endswith(("/", "=")) else " "

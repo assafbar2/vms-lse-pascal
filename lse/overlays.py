@@ -157,12 +157,16 @@ class MenuOverlay(Overlay):
 
     def __init__(self, title: str, items: list[MenuItem], on_select: Callable[[MenuItem], Any], *,
                  on_cancel: Callable[[], Any] | None = None,
-                 on_help: Callable[[MenuItem], Any] | None = None, selected: int = 0) -> None:
+                 on_help: Callable[[MenuItem], Any] | None = None, selected: int = 0,
+                 on_tab: Callable[[], Any] | None = None,
+                 on_shift_tab: Callable[[], Any] | None = None) -> None:
         self.title = title
         self.items = items
         self.on_select = on_select
         self.on_cancel = on_cancel
         self.on_help = on_help
+        self.on_tab = on_tab
+        self.on_shift_tab = on_shift_tab
         self.index = selected
         self.scroll = 0
         self.visible = len(items)
@@ -185,6 +189,12 @@ class MenuOverlay(Overlay):
             self.index = 0
         elif key == "End":
             self.index = n - 1
+        elif key == "Tab" and self.on_tab is not None:
+            self.close(editor)
+            self.on_tab()
+        elif key == "S-Tab" and self.on_shift_tab is not None:
+            self.close(editor)
+            self.on_shift_tab()
         elif key in ("Enter", "Tab"):
             self.close(editor)
             self.on_select(self.current)

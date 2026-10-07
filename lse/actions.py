@@ -208,7 +208,7 @@ def new_line(ed: "Editor", args: Args) -> None:
 
 
 @command("DELETE PREVIOUS CHARACTER", "Delete the character left of the cursor (Backspace).",
-         "Editing", typing=True, aliases=("RUBOUT",))
+         "Editing", typing=True)
 def delete_previous(ed: "Editor", args: Args) -> None:
     if not ed.ensure_writable():
         return
@@ -444,9 +444,10 @@ def _open_menu(ed: "Editor", buf: Buffer, cur: ph.Placeholder, defn: Placeholder
             ed.info("CHOICE", f"{opt.text}: {item.detail or 'inserted as it is'}")
 
     ed.menu(cur.name, items, select, on_help=help_for,
-            on_cancel=lambda: ed.info("CANCELLED", f"menu closed; {cur.text} is unchanged"))
-    ed.show(f"Choose for {cur.text}: Up/Down and Enter, Esc cancels, F1 explains",
-            "I", log=False)
+            on_cancel=lambda: ed.info("CANCELLED", f"menu closed; {cur.text} is unchanged"),
+            on_tab=lambda: _goto_placeholder(ed, True),
+            on_shift_tab=lambda: _goto_placeholder(ed, False))
+    ed.show(f"{cur.text}: Enter picks, Tab skips it, Esc cancels, F1 explains", "I", log=False)
 
 
 def _choose(ed: "Editor", buf: Buffer, cur: ph.Placeholder, opt: MenuOption,

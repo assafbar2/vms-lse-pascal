@@ -71,6 +71,9 @@ def normalize_key(name: str) -> str:
     raise ValueError(f"unknown key name: {name!r}")
 
 
+_KEY_SPEC = re.compile(r"<([A-Za-z0-9^][A-Za-z0-9_+\-^]*)>")
+
+
 def parse_keys(spec: str) -> list[str]:
     """Split a key spec such as ``"PROGRAM<Tab>Hello<C-s>"`` into keys.
 
@@ -82,10 +85,10 @@ def parse_keys(spec: str) -> list[str]:
     while i < len(spec):
         ch = spec[i]
         if ch == "<":
-            j = spec.find(">", i + 2)
-            if j > i + 1:
-                keys.append(normalize_key(spec[i + 1:j]))
-                i = j + 1
+            m = _KEY_SPEC.match(spec, i)
+            if m:
+                keys.append(normalize_key(m.group(1)))
+                i = m.end()
                 continue
         keys.append("Enter" if ch == "\n" else ch)
         i += 1

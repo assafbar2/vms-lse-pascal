@@ -472,21 +472,20 @@ class Editor:
         if buf.read_only:
             self.warn("READONLY", f"buffer {buf.name} is read-only; Ctrl-W goes back to your file")
             return
-        if not self._prev_typing:
-            found = ph.placeholder_at(buf.lines, buf.row, buf.col)
+        found = None if self._prev_typing else ph.placeholder_at(buf.lines, buf.row, buf.col)
+        row, col = (found.row, found.start) if found else buf.cursor
+        overstrike = not self.insert_mode and not found and col < len(buf.lines[row])
+        kind = "over" if overstrike else "type"
+        group = None if found else (kind, row, col)
+        with buf.change(group=group, next_group=(kind, row, col + 1)):
             if found is not None:
-                with buf.change():
-                    buf.delete(found.row, found.start, found.row, found.end)
-                buf.set_cursor(found.row, found.start)
+                buf.delete(found.row, found.start, found.row, found.end)
                 if found.is_list:
                     self.overtyped = OverTyped(buf, found.row, found.start, found)
-        row, col = buf.cursor
-        line = buf.lines[row]
-        if not self.insert_mode and col < len(line):
-            with buf.change(group=("over", row, col), next_group=("over", row, col + 1)):
+            line = buf.lines[row]
+            if overstrike:
                 buf.replace_line(row, line[:col] + ch + line[col + 1:])
-        else:
-            with buf.change(group=("type", row, col), next_group=("type", row, col + 1)):
+            else:
                 buf.insert(row, col, ch)
         buf.set_cursor(row, col + 1)
         self.typing_streak = True
