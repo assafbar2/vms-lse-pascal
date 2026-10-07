@@ -22,9 +22,13 @@ class Terminal:
         fcntl.ioctl(slave, termios.TIOCSWINSZ, struct.pack("HHHH", rows, cols, 0, 0))
         path = os.pathsep.join(filter(None, [extra_path, ROOT]))
         env = dict(os.environ, TERM="xterm", PYTHONPATH=path, ESCDELAY="25")
+        def make_controlling_terminal():
+            os.setsid()
+            fcntl.ioctl(0, termios.TIOCSCTTY, 0)  # so Ctrl-C becomes SIGINT, as in a real terminal
+
         self.proc = subprocess.Popen([sys.executable, "-m", "lse", *args], stdin=slave,
                                      stdout=slave, stderr=slave, cwd=cwd, env=env,
-                                     start_new_session=True)
+                                     preexec_fn=make_controlling_terminal)
         os.close(slave)
         self.output = bytearray()
 
@@ -152,6 +156,25 @@ def test_f5_suspends_screen_and_runs_program(tmp_path):
     term.send(CTRL_Q)
     assert term.finish() == 0
     assert (work / "ASK.EXE").exists()
+
+
+def test_ctrl_c_stops_a_running_program(tmp_path):
+    pkg = tmp_path / "fakepkg" / "pascal"
+    pkg.mkdir(parents=True)
+    (pkg / "__init__.py").write_text("")
+    (pkg / "api.py").write_text(FAKE_PASCAL_API)
+    work = tmp_path / "work"
+    work.mkdir()
+    (work / "WAIT.PAS").write_text("PROGRAM Wait(INPUT, OUTPUT);\nBEGIN\n  READLN(n)\nEND.\n")
+    term = Terminal(work, "WAIT.PAS", extra_path=str(tmp_path / "fakepkg"))
+    term.drain(quiet=1.0)
+    term.send(b"\x1b[15~", quiet=1.0)  # F5: the program waits in READLN
+    term.send(b"\x03", quiet=1.0)       # Ctrl-C
+    assert "Press RETURN to go back to LSE" in term.text
+    term.send(b"\r", quiet=1.0)
+    assert "INTERRUPTED" in term.text
+    term.send(CTRL_Q)
+    assert term.finish() == 0
 
 
 def test_keytest(tmp_path):
