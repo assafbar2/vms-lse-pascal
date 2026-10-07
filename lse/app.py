@@ -120,6 +120,9 @@ def start_editor(editor, args: argparse.Namespace) -> None:
         editor.push_overlay(KeyTestOverlay(on_close=editor.request_quit))
     elif args.file:
         editor.execute(f"GOTO FILE {quote(args.file)}")
+        if tutor is not None and not tutor.ever_finished and editor.message is not None:
+            from .guidance import TUTORIAL_OFFER
+            editor.message.text += "\n" + TUTORIAL_OFFER
     elif tutor is not None and (getattr(args, "tutorial", False) or not (
             getattr(args, "no_tutorial", False) or tutor.ever_finished)):
         tutor.start(resume=True)

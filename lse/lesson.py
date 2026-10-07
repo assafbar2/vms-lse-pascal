@@ -363,6 +363,9 @@ def parse(text: str, filename: str = "<lesson>") -> Lesson:
                 raise LessonError(filename, step.line, f"step {step.id} has no SEE line")
             lesson.steps.append(step)
             step = None
+        elif word == "STEP":
+            raise LessonError(filename, lineno, f"STEP {rest[0][0] if rest else ''} starts "
+                              f"before the END STEP of {step.id}")
         elif word == "TITLE":
             step.title = _one_string(rest, "TITLE", filename, lineno)
         elif word == "TEXT":

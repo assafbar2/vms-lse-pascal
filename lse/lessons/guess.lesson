@@ -234,7 +234,7 @@ STEP decide
     CHECK CONTAINS_STATEMENT "IF guess < secret THEN WRITELN(%{text}%...)" "IF guess < secret THEN WRITELN(%{text}%...) ELSE %{other}%"
     CHECK CONTAINS_TEXT "'Too low"
   DO "Press Tab, Down, Enter for ELSE IF. Type guess > secret, Tab, WRITELN, Tab, 'Too high!', Tab."
-    NEXT "Tab, Down, Enter: ELSE IF. guess > secret, Tab, WRITELN, Tab, 'Too high!', Tab"
+    NEXT "Tab Down Enter (ELSE IF), guess > secret, Tab, WRITELN, Tab, 'Too high!'"
     CHECK CONTAINS_STATEMENT "IF guess < secret THEN %{a}% ELSE IF guess > secret THEN WRITELN(%{text}%...)" "IF guess < secret THEN %{a}% ELSE IF guess > secret THEN WRITELN(%{text}%...) ELSE %{other}%"
     CHECK CONTAINS_TEXT "'Too high"
   DO "Press Tab, Enter for ELSE. Type WRITELN, Tab and 'Correct!'"

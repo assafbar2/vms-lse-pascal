@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from typing import TYPE_CHECKING, Any
 
 from .keys import is_printable
-from .overlays import Overlay
+from .overlays import Overlay, page_height
 
 if TYPE_CHECKING:
     from .editor import Editor
@@ -242,7 +242,7 @@ class HelpOverlay(Overlay):
         return lines
 
     def draw(self, editor: "Editor", scr: "VirtualScreen") -> None:
-        h, w = scr.height, scr.width
+        h, w = page_height(scr), scr.width
         for r in range(h):
             scr.fill(r, "help")
         title = "HELP " + " ".join(self.topic.path)

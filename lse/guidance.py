@@ -92,12 +92,15 @@ def _overlay_action(s: State) -> str:
     if not o:
         return ""
     if o == "menu":
-        return "Up/Down to choose, Enter to pick it, Esc to close the menu (F1 explains a choice)"
+        return "Up/Down to choose, Enter to pick it, Esc closes the menu (F1 explains)"
     if o == "prompt":
         label = s.overlay_info.strip().rstrip(":").strip()
         if label.startswith("LSE>") or not label:
             return "Type a command and press Enter (Tab completes it, Esc cancels)"
-        return f"Type the answer for \"{label}\" and press Enter (Tab completes, Esc cancels)"
+        m = re.match(r"(.*?)\s*\[(.*)\]$", label)
+        if m:
+            return f"{m.group(1)}: type it and press Enter, or just Enter for {m.group(2)}"
+        return f"{label}: type it and press Enter (Tab completes, Esc cancels)"
     if o == "question":
         keys = s.overlay_info or "Y or N"
         return f"Press {keys} to answer, or Esc to cancel"
@@ -108,7 +111,7 @@ def _overlay_action(s: State) -> str:
     if o == "preview":
         return "Enter puts this into your program; Esc keeps yours as it is"
     if o == "help":
-        return "Up/Down picks a topic, Enter opens it, Backspace goes back, Esc leaves help"
+        return "Up/Down picks a topic, Enter opens it, Backspace goes back, Esc leaves"
     return "Read it, then press Esc to go back (Up/Down scroll)"
 
 
@@ -121,20 +124,20 @@ def _view_action(s: State) -> str:
     if v == "source":
         return ""
     if v == "none":
-        return "Ctrl-O opens a file (try HELLO.PAS), or Ctrl-P and type TUTORIAL to learn Pascal"
+        return "Ctrl-O opens a file, or Ctrl-P and type TUTORIAL to learn Pascal"
     if v == "text":
         if s.modified:
             return "Ctrl-S saves your changes (Ctrl-Q quits)"
         return "Type to edit it; Ctrl-O opens another file, Ctrl-Q quits"
     if v == "readonly":
-        return f"This file is read-only (the toolchain writes it). {_back(s)}"
+        return f"This file is read-only. {_back(s)}"
     if v == "review":
         return "Enter goes to the message under the cursor, F8 to the next; Esc goes back"
     if v == "output":
-        return f"This is what your program printed. {_back(s)}"
+        return f"Your program's output. {_back(s)}"
     if v == "lesson":
-        return f"This is the lesson; Up/Down scroll it. {_back(s)}"
-    return f"This is a system buffer (read-only). {_back(s)}"
+        return f"The lesson; Up/Down scroll it. {_back(s)}"
+    return f"Read-only buffer. {_back(s)}"
 
 
 def _source_action(s: State) -> str:
@@ -151,7 +154,7 @@ def _source_action(s: State) -> str:
     if s.modified:
         return "Ctrl-S saves your changes (F7 saves and compiles)"
     if s.compiled in ("none", "stale"):
-        return f"F7 compiles {s.file} (F5 compiles, links and runs it)"
+        return f"F7 compiles {s.file} (F5 also links and runs it)"
     if s.compiled == "failed":
         n = max(1, s.errors)
         k = min(n, s.error_index + 2) if s.error_index + 1 < n else n
@@ -172,7 +175,8 @@ def _source_action(s: State) -> str:
     return "Edit and try again (F5 runs it again), or F1 for ideas"
 
 
-TUTORIAL_TIP = "New to Pascal? Ctrl-P, type TUTORIAL"
+TUTORIAL_TIP = "New? Ctrl-P TUTORIAL"
+TUTORIAL_OFFER = "New to Pascal? Press Ctrl-P and type TUTORIAL to learn it step by step."
 
 
 # ============================================================================

@@ -156,6 +156,8 @@ class Tutor:
         self._runs: dict[tuple[int, str, int | None], tuple[bool, str]] = {}
         self._tmp: str | None = None
         self._finished_now = False
+        #: after a jump or resume, wait for something new before passing the step
+        self._hold: tuple | None = None
 
     # ----- where things are ---------------------------------------------------
 
@@ -219,6 +221,8 @@ class Tutor:
             ed.show_buffer(buf)
         self.active = True
         self.visible = True
+        if had_progress:
+            self._hold = self._fingerprint()
         self.update()
         n = self.index + 1
         if had_progress and self.index > 0:
@@ -270,10 +274,10 @@ class Tutor:
 
     def restart(self) -> None:
         def go() -> None:
-            self.goto(0)
             buf = self.source()
             if buf is not None:
                 self._blank_file(buf)
+            self.goto(0)
             if not self.active:
                 self.start(resume=True)
             self.ed.info("TUTORIAL", f"back to step 1 of {self.total}: {self.step.title}")
@@ -300,8 +304,18 @@ class Tutor:
                 with buf.change():
                     buf.set_lines(prev)
                 buf.save()
+        self._hold = self._fingerprint()
         self.save()
         self.update()
+
+    def _fingerprint(self) -> tuple:
+        """What has to change before a step may pass by itself after a jump."""
+        buf = self.source()
+        if buf is None:
+            return ()
+        st = self.ed.builds.get(buf.path or buf.name)
+        build = (st.compiled_state, st.linked_state, st.ran_state, id(st.run_result)) if st else ()
+        return (buf.state_id, build, frozenset(self.latches))
 
     def _enter_step(self) -> None:
         self.latches = set()
@@ -599,7 +613,9 @@ class Tutor:
             self.last_progress = self.ed.clock()
             self.fails = 0
         self._done_count = done
-        if status.passed:
+        if self._hold is not None and self._hold != self._fingerprint():
+            self._hold = None
+        if status.passed and self._hold is None:
             self._advance()
             ctx = self._context() or ctx
             self._observe(ctx)
@@ -675,8 +691,16 @@ class Tutor:
         if st.current is not None:
             item = step.items[st.current]
             failing = st.failing
-            if failing is not None and failing[0].durable and buf is not None:
-                err = self._error_away_from_cursor(buf)
+            if failing is not None and buf is not None and not self._mistakes_wanted():
+                kind = failing[0].kind
+                if failing[0].durable:
+                    err = self._error_away_from_cursor(buf)
+                elif kind in ("COMPILES", "LINKS", "RAN", "RUN_OUTPUT_CONTAINS"):
+                    err = self._error_away_from_cursor(buf, anywhere=True)
+                    if err is None and build_states(ed, buf)["compiled"] == "failed":
+                        err = "F8 goes to the mistake the compiler found; fix it, then F7"
+                else:
+                    err = None
                 if err is not None:
                     return err
             return item.next_text
@@ -684,11 +708,15 @@ class Tutor:
             return f"Almost: {st.failing[1]}. F4 gives a hint"
         return "F2 checks your work"
 
-    def _error_away_from_cursor(self, buf: "Buffer") -> str | None:
+    def _mistakes_wanted(self) -> bool:
+        """The step is about making a mistake, so do not point it out."""
+        return any(c.kind in ("COMPILE_FAILED", "MADE_ERROR") for c in self.step.all_checks)
+
+    def _error_away_from_cursor(self, buf: "Buffer", anywhere: bool = False) -> str | None:
         ctx = _Context(buf, buf.text, buf.state_id)
         for d in ctx.errors(self, "EFW"):
             line = getattr(d, "line", None)
-            if line and line != buf.row + 1:
+            if line and (anywhere or line != buf.row + 1):
                 return f"Line {line}: {_headline(d)}. F7, then F8 jumps to it"
         return None
 
@@ -705,7 +733,7 @@ class Tutor:
     def status_segment(self, ed: "Editor", win: "Window"):
         if not self.active or self.shown or win.buffer.system:
             return None
-        return [(f"Lesson {self.index + 1}/{self.total}: Ctrl-L", "pipeline_current")]
+        return [(f"Lesson {self.index + 1}/{self.total} ^L", "pipeline_current")]
 
     # ----- the LESSON window --------------------------------------------------------
 
@@ -1127,6 +1155,6 @@ def install(ed: "Editor", lesson_name: str = "guess", *,
     ed.after_key_hooks.append(lambda e, key: tutor.update())
     ed.idle_hooks.append(lambda e: tutor.update())
     ed.command_hooks.append(tutor.on_command)
-    ed.status_providers.append(tutor.status_segment)
+    ed.status_providers.insert(0, tutor.status_segment)
     ed.on_quit.append(lambda e: tutor.save() if tutor.active else None)
     return tutor

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING, Callable
 
 from .commands import Command, complete_files
 from .keys import is_printable
-from .overlays import Overlay
+from .overlays import Overlay, page_height
 
 if TYPE_CHECKING:
     from .editor import Editor
@@ -100,14 +100,10 @@ class WelcomeOverlay(Overlay):
             editor.show("Use Up/Down and Enter to choose; Ctrl-Q quits.", "I", log=False)
 
     def draw(self, editor: "Editor", scr: "VirtualScreen") -> None:
-        h, w = scr.height, scr.width
-        bottom = set()
-        for name in ("next", "keybar"):
-            bottom.update(scr.regions.get(name, []))
-        top_rows = [r for r in range(h) if r not in bottom]
-        for r in top_rows:
+        w = scr.width
+        box_h = max(3, page_height(scr))
+        for r in range(box_h):
             scr.fill(r, "help")
-        box_h = max(3, len(top_rows))
         scr.box(0, 0, box_h, w, "border", title="LSE for Pascal")
         row = 1
         logo_w = max(len(l) for l in LOGO)

@@ -19,6 +19,13 @@ if TYPE_CHECKING:
     from .vscreen import VirtualScreen
 
 
+def page_height(scr: "VirtualScreen") -> int:
+    """Rows a full-screen page may cover: all of them, or everything above the
+    NEXT line when the guidance layer is on (NEXT, messages and keys stay visible)."""
+    nxt = scr.regions.get("next")
+    return nxt[0] if nxt else scr.height
+
+
 class Overlay:
     #: True when the overlay covers the whole screen (help, key test)
     full_screen = False
@@ -303,7 +310,7 @@ class TextViewOverlay(Overlay):
         return out
 
     def draw(self, editor: "Editor", scr: "VirtualScreen") -> None:
-        h, w = scr.height, scr.width
+        h, w = page_height(scr), scr.width
         for r in range(h):
             scr.fill(r, "help")
         scr.box(0, 0, h, w, "border", title=self.title)
