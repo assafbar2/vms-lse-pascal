@@ -17,7 +17,7 @@ import bisect
 from dataclasses import dataclass, field
 
 from . import VERSION
-from .pcode import CODE, DATA, Instr, SymRef, format_instr, operand_kinds, parse_operands, strip_comment
+from .pcode import CODE, Instr, SymRef, format_instr, operand_kinds, parse_operands, strip_comment
 
 
 class ObjFormatError(Exception):

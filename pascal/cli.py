@@ -202,8 +202,9 @@ def run_main(argv: list[str] | None = None) -> int:
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
-    if not argv or argv[0].upper() not in COMMANDS:
+    command, *quals = argv[0].split("/") if argv else [""]
+    if command.upper() not in COMMANDS:
         print(f"VMS-LSE Pascal {VERSION}\nusage: python -m pascal PASCAL|LINK|RUN [qualifiers] files",
               file=sys.stderr)
         return 2
-    return _entry(argv[0].upper(), argv[1:])
+    return _entry(command.upper(), ["/" + q for q in quals if q] + argv[1:])

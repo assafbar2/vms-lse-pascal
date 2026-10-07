@@ -43,6 +43,8 @@ def test_guess_with_seed_and_piped_input(pas):
     assert r.stdout.endswith("Correct! You got it in 1 tries.\n")
     r2 = run_cli(["RUN", "GUESS", "--seed", "42"], pas.dir, input_text=f"{secret}\n")
     assert r2.stdout.endswith("Correct! You got it in 1 tries.\n")
+    r3 = run_cli(["RUN/SEED=42", "GUESS"], pas.dir, input_text=f"{secret}\n")
+    assert r3.stdout == r2.stdout
 
 
 def test_compile_errors_show_source_line_and_caret(pas):

@@ -26,7 +26,13 @@ TRACE_HEAD = 20
 TRACE_TAIL = 5
 
 OPS = {name: i for i, name in enumerate(OPCODES)}
-globals().update({f"OP_{name}": i for name, i in OPS.items()})
+(OP_LIT, OP_LITS, OP_LDG, OP_STG, OP_LAG, OP_LDL, OP_STL, OP_LAL, OP_LDI, OP_STI, OP_LAI,
+ OP_IND, OP_STO, OP_MOVE, OP_LDBLK, OP_SMOVE, OP_SBLK, OP_INDEX, OP_OFFS, OP_ADDI, OP_SUBI,
+ OP_MULI, OP_DIVI, OP_MODI, OP_NEGI, OP_ADDR, OP_SUBR, OP_MULR, OP_DIVR, OP_NEGR, OP_FLT,
+ OP_FLT2, OP_EQU, OP_NEQ, OP_LES, OP_LEQ, OP_GRT, OP_GEQ, OP_AND, OP_OR, OP_NOT, OP_ABSI,
+ OP_ABSR, OP_SQRI, OP_SQRR, OP_ODD, OP_CHR, OP_TRUNC, OP_ROUND, OP_SUCC, OP_PRED, OP_CHK,
+ OP_DUP, OP_POP, OP_JMP, OP_JPF, OP_JPT, OP_MARK, OP_CALL, OP_ENTER, OP_RET, OP_RETF, OP_RETV,
+ OP_NATIVE, OP_STOP, OP_CASERR) = range(len(OPCODES))
 
 
 @dataclass
@@ -85,7 +91,6 @@ class VM:
     def _loop(self):
         M = self.M
         code = self.code
-        rt = self.rt
         pc = self.pc
         bp = self.bp
         steps = self.steps

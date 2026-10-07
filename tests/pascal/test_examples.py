@@ -78,6 +78,23 @@ def test_guess_plays_deterministically(pas, seed):
     assert again.output == r.output
 
 
+def test_removing_any_semicolon_from_guess_gives_one_clear_error():
+    from pathlib import Path
+    text = (Path(__file__).resolve().parents[2] / "examples" / "GUESS.PAS").read_text()
+    lines = text.split("\n")
+    checked = 0
+    for ln, line in enumerate(lines, 1):
+        if not line.rstrip().endswith(";"):
+            continue
+        broken = "\n".join(lines[:ln - 1] + [line.rstrip()[:-1]] + lines[ln:])
+        d = api.parse_source(broken, "GUESS.PAS").diagnostics
+        assert [x.ident for x in d] == ["SEMIEXP"], (ln, [x.format() for x in d])
+        assert d[0].hint.startswith(f'Add ";" at the end of line {ln}, after '), d[0].hint
+        assert d[0].line > ln
+        checked += 1
+    assert checked >= 9
+
+
 def test_guess_survives_a_letter_typed_into_the_game(pas):
     exe = build(pas, "GUESS")
     secret = secret_for(5)
