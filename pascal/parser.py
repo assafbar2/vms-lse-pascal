@@ -282,7 +282,7 @@ class Parser:
     def var_part(self) -> list[A.Node]:
         self.advance()
         out = []
-        while (self.at("IDENT", "[")
+        while (self.at("IDENT") or (self.at("[") and self.attributes_precede_var())
                or (self.at("PLACEHOLDER") and self.peek().kind in (",", ":"))):
             start = self.tok
             try:
@@ -297,6 +297,13 @@ class Parser:
             except ParseError:
                 self.sync_decl()
         return out
+
+    def attributes_precede_var(self) -> bool:
+        """True if the [attribute list] at the current token is followed by a variable name."""
+        n = 1
+        while self.peek(n).kind not in ("]", "EOF", ";"):
+            n += 1
+        return self.peek(n).kind == "]" and self.peek(n + 1).kind in ("IDENT", "PLACEHOLDER")
 
     def attributes(self) -> list[str]:
         self.expect("[")

@@ -245,10 +245,10 @@ _CATALOG: list[MessageInfo] = [
     _m("PASCAL", "TOOMANYERR", "F", "too many errors; compilation abandoned",
        "After this many errors, later messages are usually caused by the earlier ones.",
        "Fix the first few errors and compile again."),
-    _m("PASCAL", "OPENIN", "F", 'error opening "{file}" as input',
+    _m("PASCAL", "OPENIN", "F", 'error opening "{filename}" as input',
        "The compiler could not read the source file. It may not exist, or the name may be misspelled.",
        "Check the file name and the directory you are in. Pascal source files end in .PAS."),
-    _m("PASCAL", "OPENOUT", "F", 'error opening "{file}" as output',
+    _m("PASCAL", "OPENOUT", "F", 'error opening "{filename}" as output',
        "The compiler could not write one of its output files (object, diagnostics or listing).",
        "Check that the directory is writable and the disk is not full."),
     _m("PASCAL", "BADATTR", "W", 'attribute [{attr}] is ignored',
@@ -423,15 +423,15 @@ _CATALOG: list[MessageInfo] = [
     # ------------------------------------------------------------------
     # LINK: the linker
     # ------------------------------------------------------------------
-    _m("LINK", "OPENIN", "F", 'error opening "{file}" as input',
+    _m("LINK", "OPENIN", "F", 'error opening "{filename}" as input',
        "The linker could not read an object file. Object files (.OBJ) are made by compiling a .PAS file.",
        "Compile the source first (PASCAL name), and check the spelling of the file name.",
        "Compile the source first (PASCAL {stem}), and check the spelling of the file name."),
-    _m("LINK", "BADOBJ", "F", '"{file}" is not a valid object file: {reason}',
+    _m("LINK", "BADOBJ", "F", '"{filename}" is not a valid object file: {reason}',
        "The file does not have the layout of an object file made by the Pascal compiler, "
        "perhaps because it was edited by hand or written by another program.",
        "Compile the source file again to make a fresh .OBJ file."),
-    _m("LINK", "BADLIB", "F", 'library "{file}" is damaged: {reason}',
+    _m("LINK", "BADLIB", "F", 'library "{filename}" is damaged: {reason}',
        "The run-time library PASRTL.OLB, which supplies WRITELN, READLN, RANDOM and friends, could not be read.",
        "Reinstall the toolchain, or regenerate the library with: python -m pascal.rtl"),
     _m("LINK", "NOFILES", "F", "no object files given",
@@ -465,7 +465,7 @@ _CATALOG: list[MessageInfo] = [
        "otherwise the program would pass the wrong values.",
        "Copy the heading from the defining module so both match exactly.",
        "Make the heading in {module} match {defmodule}: {defsig} (found {usesig})."),
-    _m("LINK", "OPENOUT", "F", 'error opening "{file}" as output',
+    _m("LINK", "OPENOUT", "F", 'error opening "{filename}" as output',
        "The linker could not write the image (.EXE) or map (.MAP) file.",
        "Check that the directory is writable and the disk is not full."),
     # ------------------------------------------------------------------
@@ -534,11 +534,11 @@ _CATALOG: list[MessageInfo] = [
     _m("PAS", "CONTROLC", "F", "program interrupted by Ctrl-C",
        "You pressed Ctrl-C, which stops a running program immediately.",
        "Run the program again when you are ready; Ctrl-C is the way to stop a program that will not end."),
-    _m("PAS", "NOIMAGE", "F", 'image file "{file}" not found',
+    _m("PAS", "NOIMAGE", "F", 'image file "{filename}" not found',
        "RUN needs an executable image (.EXE), which LINK makes from compiled object files.",
        "Compile and link first: PASCAL name, then LINK name, then RUN name.",
        "Compile and link first: PASCAL {stem}, then LINK {stem}, then RUN {stem}."),
-    _m("PAS", "BADIMAGE", "F", '"{file}" is not a valid image: {reason}',
+    _m("PAS", "BADIMAGE", "F", '"{filename}" is not a valid image: {reason}',
        "The file does not have the layout of an image made by LINK.",
        "Link the program again to make a fresh .EXE file."),
     _m("PAS", "BUGCHECK", "F", "internal error in the p-code machine: {reason}",
@@ -582,6 +582,8 @@ def diag(facility: str, ident: str, *, file: str | None = None, line: int | None
     """Build a Diagnostic for a catalog message, filling in its fields."""
     info = get_message(facility, ident)
     args = {k: v for k, v in args.items() if v is not None}
+    if "filename" not in args and file is not None:
+        args["filename"] = file
     text = _fill(info.template, args)
     if text is None:
         missing = _fields(info.template) - args.keys()
