@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+.venv/
+
+# Toolchain output (the run-time library pascal/PASRTL.OLB is source, not output)
+*.OBJ
+*.obj
+*.EXE
+*.exe
+*.MAP
+*.map
+*.DIA
+*.dia
+*.LIS
+*.lis
