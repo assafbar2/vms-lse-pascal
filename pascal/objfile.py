@@ -530,7 +530,9 @@ def read_image(text: str) -> Image:
                 for k, a in zip(kinds, args):
                     if isinstance(a, SymRef):
                         raise ObjFormatError(f"unresolved symbol {a.name} in image", no)
-                img.code.append(Instr(op, args, 0))
+                code_part = strip_comment(raw)
+                comment = raw[len(code_part) + 1:].strip() if len(code_part) < len(raw) else ""
+                img.code.append(Instr(op, args, 0, comment))
                 continue
             f = _split_fields(line)
             if section == ".MODULES":

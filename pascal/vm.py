@@ -22,6 +22,8 @@ MININT = -2147483648
 MAX_REAL = 1.7976931348623157e308
 STACK_LIMIT = 2_000_000
 DEPTH_LIMIT = 20_000
+TRACE_HEAD = 20
+TRACE_TAIL = 5
 
 OPS = {name: i for i, name in enumerate(OPCODES)}
 globals().update({f"OP_{name}": i for name, i in OPS.items()})
@@ -122,14 +124,14 @@ class VM:
                     append(None)
                     append(None)
                 elif op == OP_CALL:
+                    depth += 1
+                    if depth > DEPTH_LIMIT or len(M) > STACK_LIMIT:
+                        raise PascalRuntimeError("STKOVF")
                     nbp = len(M) - b - 3
                     M[nbp + 1] = bp
                     M[nbp + 2] = pc
                     bp = nbp
                     pc = a
-                    depth += 1
-                    if depth > DEPTH_LIMIT or len(M) > STACK_LIMIT:
-                        raise PascalRuntimeError("STKOVF")
                 elif op == OP_ENTER:
                     if a:
                         M.extend([None] * a)
@@ -440,7 +442,15 @@ class VM:
             "module name     routine name                     line       rel PC    abs PC",
         ]
         location = (None, None)
-        for _base, pc in self.frames():
+        frames = self.frames()
+        shown = list(enumerate(frames))
+        if len(frames) > TRACE_HEAD + TRACE_TAIL:
+            shown = shown[:TRACE_HEAD] + [(-1, (0, 0))] + shown[-TRACE_TAIL:]
+        for index, (_base, pc) in shown:
+            if index < 0:
+                hidden = len(frames) - TRACE_HEAD - TRACE_TAIL
+                lines.append(f"                ... {hidden} more calls not shown ...")
+                continue
             mod = img.module_at(pc)
             r = img.routine_at(pc)
             ln = img.line_at(pc)

@@ -257,7 +257,7 @@ _CATALOG: list[MessageInfo] = [
     _m("PASCAL", "PROGPARAM", "W", 'program parameter "{name}" is ignored',
        "Only the standard files INPUT (the keyboard) and OUTPUT (the screen) can be listed in the "
        "program heading; this subset has no other files.",
-       "Use PROGRAM Name(INPUT, OUTPUT);"),
+       "Write the heading as PROGRAM Name(INPUT, OUTPUT); and leave other names out."),
     # ------------------------------------------------------------------
     # PASCAL: the compiler -- meaning (declarations and types)
     # ------------------------------------------------------------------

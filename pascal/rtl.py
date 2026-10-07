@@ -101,7 +101,8 @@ class Runtime:
         self.rng = Lcg(seed if seed is not None else DEFAULT_SEED)
         self.output: list[str] = []
         self.transcript: list[str] = []
-        self.out_line = ""        # text written on the current output line (the prompt)
+        self.out_line = ""        # text written on the current output line
+        self.since_input = ""     # text written since the last input line (the prompt)
         self.tr_col = 0
         self.term_col = 0
         self.line: str | None = None
@@ -112,7 +113,7 @@ class Runtime:
             "PAS$WRITE_INT": lambda a: self.write_int(a[0], a[1]),
             "PAS$WRITE_REAL": lambda a: self.write_real(a[0], a[1], a[2]),
             "PAS$WRITE_BOOL": lambda a: self.write_field("TRUE" if a[0] else "FALSE", a[1]),
-            "PAS$WRITE_CHAR": lambda a: self.write_field(chr(a[0]), a[1]),
+            "PAS$WRITE_CHAR": lambda a: self.write_str(chr(a[0]), a[1]),
             "PAS$WRITE_STR": lambda a: self.write_str(a[0], a[1]),
             "PAS$WRITE_CHARS": lambda a: self.write_str(self.chars_at(a[0], a[1]), a[2]),
             "PAS$WRITE_ENUM": lambda a: self.write_field(a[2].split(",")[a[0]], a[1]),
@@ -143,6 +144,7 @@ class Runtime:
         self.output.append(s)
         nl = s.rfind("\n")
         self.out_line = s[nl + 1:] if nl >= 0 else self.out_line + s
+        self.since_input = s[nl + 1:] if nl >= 0 else self.since_input + s
 
     def _to_transcript(self, s: str):
         if not s:
@@ -209,7 +211,8 @@ class Runtime:
 
     # -- input -----------------------------------------------------------------
     def fetch_line(self) -> bool:
-        self.prompt = self.out_line
+        self.prompt = self.since_input
+        self.since_input = ""
         self.flush()
         if self.stdin is not None:
             s = self.stdin.readline()
