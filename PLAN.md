@@ -4,67 +4,67 @@ overview: 'Build a terminal editor modeled on VAX/VMS LSE: modern keybindings wi
 todos:
   - id: scaffold
     content: 'Scaffold project: pyproject.toml (windows-curses on Windows only, lse entry point for pipx/uv tool install), lse/ and pascal/ packages, README, pytest setup'
-    status: pending
+    status: completed
   - id: frontend
     content: 'Pascal lexer, recursive-descent parser, AST, semantic analysis with VMS-style diagnostics (.DIA, .LIS)'
-    status: pending
+    status: completed
   - id: codegen-vm
     content: 'P-code generator and stack VM with static links, runtime library (PAS$ routines), runtime traceback'
-    status: pending
+    status: completed
   - id: obj-linker
     content: 'Text .OBJ format with GLOBALS/EXTERNALS/fixups, linker producing .EXE and .MAP, MODULE + [GLOBAL]/[EXTERNAL] support'
-    status: pending
+    status: completed
   - id: cli
     content: 'DCL-like CLI: pascal / link / run entry points; example programs and toolchain tests'
-    status: pending
+    status: completed
   - id: editor-core
     content: 'Editor core: line buffer with undo, versioned save, curses screen with VT-style status/message/LSE> lines, split windows'
-    status: pending
+    status: completed
   - id: keymap-cmds
     content: 'Modern keymap and LSE command registry/parser (COMPILE, LINK, RUN, REVIEW, GOTO FILE, SET THEME, EXIT)'
-    status: pending
+    status: completed
   - id: placeholders
     content: 'langdef parser for DEFINE LANGUAGE/TOKEN/PLACEHOLDER, placeholder navigation/expand/erase, menu popups, pascal.lse'
-    status: pending
+    status: completed
   - id: integration
     content: 'Integrate toolchain into editor: REVIEW error window, RUN with screen suspend and $OUTPUT buffer, F5/F7/F8'
-    status: pending
+    status: completed
   - id: polish
     content: 'Themes (VT220/amber/green), keypad help screen, README usage docs, end-to-end demo'
-    status: pending
+    status: completed
   - id: rtl-random
     content: 'Add RANDOMIZE / RANDOM(n) runtime extension (PAS$RANDOM in PASRTL) with RUN/SEED for deterministic tests'
-    status: pending
+    status: completed
   - id: explain-msgs
     content: 'Plain-English explanation + hint for every compiler/linker/runtime message (SET MESSAGES /EXPLAIN)'
-    status: pending
+    status: completed
   - id: placeholder-help
     content: '/DESCRIPTION and /EXAMPLE on every token and placeholder in pascal.lse; F1 on a placeholder shows it'
-    status: pending
+    status: completed
   - id: help-library
     content: 'VMS-style hierarchical HELP library (pascal.hlp) with HELP PASCAL topics and examples'
-    status: pending
+    status: completed
   - id: tutor-engine
     content: 'Tutor engine: lesson file format, LESSON window, step checks (AST / compiles / links / run output), hint and show-me'
-    status: pending
+    status: completed
   - id: next-action
     content: 'next_action(state) engine + NEXT line, pipeline indicator, F-key label bar, WHAT NOW command; invariant test that it never returns empty'
-    status: pending
+    status: completed
   - id: welcome-exits
     content: 'Launch flow: tutorial auto-starts on no-arg launch (resume from ~/.lse/state and GUESS.TUT), welcome screen after it is finished, --no-tutorial; always-visible quit, RUN banners before and after the program, friendly bad-input handling in READLN'
-    status: pending
+    status: completed
   - id: key-fallbacks
     content: 'Key fallbacks for terminals that steal keys (Esc+digit = F-key, every action on the command line with Tab completion), raw mode so Ctrl-S/Ctrl-Q are not flow control, lse --keytest'
-    status: pending
+    status: completed
   - id: tutor-robustness
     content: 'Tutor robustness: DO THIS / YOU WILL SEE in each step, re-checking earlier steps, escalating hints, idle nudge, saved progress and resume, lesson window cannot be lost'
-    status: pending
+    status: completed
   - id: novice-walkthrough
     content: 'Scripted novice walkthrough test (wrong turns included) plus a recorded manual run of the tutorial'
-    status: pending
+    status: completed
   - id: guess-lesson
     content: 'Write the guess.lesson tutorial (about 10 steps) and examples/GUESS.PAS; scripted test that plays through every step'
-    status: pending
+    status: completed
 isProject: false
 ---
 # LSE-style Pascal Editor
@@ -282,6 +282,8 @@ The lesson steps:
 9. **Count tries.** `tries := tries + 1;` and print "You got it in N tries".
 10. **Play!** Compile, link and run, then play the game.
 11. **Challenges (optional):** limit the number of tries, add a "play again?" loop, or move the guessing into a `PROCEDURE`.
+
+As built (`lse/lessons/guess.lesson`), steps 6 to 8 are reordered so every step is filled in with templates (the editor has no cut and paste, so wrapping finished lines in a loop would mean retyping them): 6. **Ask again and again** (`REPEAT` with `WRITE` and `READLN` inside, `UNTIL guess = secret`), 7. **Decide** (the `IF` goes inside the loop), 8. **Count tries**, 9. **Play!**, 10. **You did it!** with the challenges.
 
 The finished program, `examples/GUESS.PAS` (about 25 lines):
 
