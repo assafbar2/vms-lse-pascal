@@ -433,7 +433,7 @@ _CATALOG: list[MessageInfo] = [
        "Compile the source file again to make a fresh .OBJ file."),
     _m("LINK", "BADLIB", "F", 'library "{filename}" is damaged: {reason}',
        "The run-time library PASRTL.OLB, which supplies WRITELN, READLN, RANDOM and friends, could not be read.",
-       "Reinstall the toolchain, or regenerate the library with: python -m pascal.rtl"),
+       "Reinstall the toolchain, or regenerate the library with the command \"python -m pascal.rtl\"."),
     _m("LINK", "NOFILES", "F", "no object files given",
        "LINK needs at least one object file to build a program from.",
        "Give the name of the compiled program, for example LINK HELLO."),
