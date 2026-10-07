@@ -10,6 +10,9 @@ contract in ``pascal/api.py``:
 * ``run_image(exe_path, *, input_text, stdin, stdout, seed) -> RunResult``
 * ``get_message(facility, ident)`` / ``all_messages()``
 
+Optional additions are used when present: ``run_image(explain=...)`` and
+``RunResult.transcript`` (output interleaved with what the user typed).
+
 Tests pass a fake module with the same functions (see
 ``lse.testing.FakePascalApi``).
 """
@@ -17,6 +20,7 @@ Tests pass a fake module with the same functions (see
 from __future__ import annotations
 
 import importlib
+import inspect
 from typing import Any
 
 
@@ -57,15 +61,32 @@ class Toolchain:
         return self.api.link([str(p) for p in obj_paths], output=output, map_file=map_file)
 
     def run(self, exe_path: str, *, input_text: str | None = None, stdin: Any = None,
-            stdout: Any = None, seed: int | None = None) -> Any:
-        return self.api.run_image(exe_path, input_text=input_text, stdin=stdin,
-                                  stdout=stdout, seed=seed)
+            stdout: Any = None, seed: int | None = None, explain: bool | None = None) -> Any:
+        kw: dict[str, Any] = dict(input_text=input_text, stdin=stdin, stdout=stdout, seed=seed)
+        if explain is not None and _accepts(self.api.run_image, "explain"):
+            kw["explain"] = explain
+        return self.api.run_image(exe_path, **kw)
 
     def message(self, facility: str, ident: str) -> Any:
         return self.api.get_message(facility, ident)
 
     def all_messages(self) -> list[Any]:
         return list(self.api.all_messages())
+
+
+def _accepts(fn: Any, name: str) -> bool:
+    """Whether ``fn`` takes keyword ``name`` (optional additions to the contract)."""
+    try:
+        params = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return False
+    return name in params or any(p.kind is p.VAR_KEYWORD for p in params.values())
+
+
+def run_text(result: Any) -> str:
+    """What the user saw during a run: the transcript (output with the typed
+    input) when the toolchain provides one, else just the output."""
+    return getattr(result, "transcript", "") or getattr(result, "output", "") or ""
 
 
 def format_diagnostic(diag: Any, explain: bool = True) -> str:

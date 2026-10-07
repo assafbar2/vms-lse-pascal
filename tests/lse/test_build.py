@@ -122,8 +122,8 @@ def test_run_before_link(hello):
 def test_f5_builds_and_runs_with_input(tmp_path):
     h = open_file(tmp_path, "ASK.PAS", ASK, program_input="42\n")
     h.press("F5")
-    assert "RAN" in h.message
-    assert h.editor.buffers["$OUTPUT"].lines == ["Number? Thanks"]
+    assert "RAN" in h.message and "exit status 0" in h.message
+    assert h.editor.buffers["$OUTPUT"].lines == ["Number? 42", "Thanks"]
     api = h.api
     names = [c[0] for c in api.calls]
     assert names == ["compile_file", "link", "run_image"]
@@ -154,12 +154,52 @@ def test_runtime_error_shows_traceback(tmp_path):
     assert "%TRACE-F-TRACEBACK, symbolic stack dump follows" in out
 
 
+def test_runtime_error_already_in_output_is_not_repeated(tmp_path):
+    h = open_file(tmp_path, "DIV.PAS", HELLO.replace("WRITELN('Hello, world')",
+                                                     "WRITELN('a'); DIVBYZERO"))
+    real_run = h.api.run_image
+
+    def run_like_real_runtime(exe, **kw):
+        res = real_run(exe, **kw)
+        res.output += res.error.format() + "\n" + "\n".join(res.traceback) + "\n"
+        return res
+    h.api.run_image = run_like_real_runtime
+    h.press("F5")
+    out = h.editor.buffers["$OUTPUT"].lines
+    assert sum(line.startswith("%PAS-F-DIVBYZERO") for line in out) == 1
+    assert sum(line.startswith("%TRACE-F-TRACEBACK") for line in out) == 1
+
+
 def test_toolchain_missing_is_a_friendly_error(tmp_path):
     h = EditorHarness(tmp_path, files={"HELLO.PAS": HELLO})
     h.editor.toolchain = Toolchain(module="no_such_pascal_module_xyz")
     h.open("HELLO.PAS")
     h.press("F7")
     assert "%LSE-E-NOTOOLCHAIN" in h.message
+
+
+def test_link_undefined_symbol_goes_to_review(tmp_path):
+    h = open_file(tmp_path, "U.PAS", HELLO.replace("WRITELN('Hello, world')",
+                                                   "x := 1;\n  UNDEFINEDSYM(x)"))
+    h.press("F5")
+    assert "%LSE-E-LINKERR, LINK failed. Press F8" in h.message
+    assert "%LINK-W-UNDFSYMS, undefined symbol UNDEFINEDSYM" in h.message
+    h.feed("<C-Home><F8>")
+    assert h.cursor == (3, 2)
+
+
+def test_noexplain_reaches_the_runtime(hello):
+    hello.command("SET MESSAGES /NOEXPLAIN")
+    hello.press("F5")
+    assert hello.api.last_explain is False
+
+
+def test_adapter_leaves_out_explain_for_older_apis():
+    seen = {}
+    api = types.SimpleNamespace(run_image=lambda exe, *, input_text=None, stdin=None,
+                                stdout=None, seed=None: seen.update(exe=exe, seed=seed))
+    Toolchain(api).run("A.EXE", seed=1, explain=False)
+    assert seen == {"exe": "A.EXE", "seed": 1}
 
 
 def test_toolchain_crash_becomes_a_message(hello):

@@ -36,16 +36,39 @@ def message_panel(editor: "Editor", width: int) -> list:
     if msg.hint:
         text = msg.text
         return [(text if len(text) <= width else text[: width - 3] + "...", role)]
-    out: list[str] = []
+    blocks: list[list[str]] = []
     for line in msg.lines:
         indent = len(line) - len(line.lstrip())
-        wrapped = textwrap.wrap(line, width, subsequent_indent=" " * (indent + 2)) or [""]
-        out.extend(wrapped)
-    if len(out) > MAX_MESSAGE_LINES:
-        out = out[:MAX_MESSAGE_LINES]
-        last = out[-1]
-        out[-1] = (last[: width - 4] + " ...") if len(last) > width - 4 else last + " ..."
-    return [(line, role) for line in out]
+        blocks.append(textwrap.wrap(line, width, subsequent_indent=" " * (indent + 2)) or [""])
+    _fit_blocks(blocks, MAX_MESSAGE_LINES, width)
+    return [(line, role) for block in blocks for line in block]
+
+
+def _fit_blocks(blocks: list[list[str]], limit: int, width: int) -> None:
+    """Trim wrapped message lines to ``limit`` rows.
+
+    The headline (first line) and any ``Hint:`` line are kept whole when
+    possible; other lines (long explanations) are shortened first.
+    """
+    def protected(i: int) -> bool:
+        return i == 0 or blocks[i][0].lstrip().startswith("Hint:")
+
+    def mark(line: str) -> str:
+        return (line[: width - 4] + " ...") if len(line) > width - 4 else line + " ..."
+
+    while sum(len(b) for b in blocks) > limit:
+        candidates = [i for i in range(len(blocks)) if not protected(i)] or \
+                     [i for i in range(len(blocks)) if i != 0] or [0]
+        i = max(candidates, key=lambda j: (len(blocks[j]), j))
+        if len(blocks[i]) > 1:
+            blocks[i] = blocks[i][:-1]
+            blocks[i][-1] = mark(blocks[i][-1])
+        elif len(blocks) > 1 and i != 0:
+            del blocks[i]
+        else:
+            blocks[0] = blocks[0][:limit]
+            blocks[0][-1] = mark(blocks[0][-1])
+            break
 
 
 def command_panel(editor: "Editor", width: int) -> list:

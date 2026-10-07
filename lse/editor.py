@@ -40,7 +40,7 @@ from .themes import DEFAULT_THEME
 from .toolchain import Toolchain, ToolchainUnavailable
 from .windows import MAX_WINDOWS, Window
 
-MAX_MESSAGE_LINES = 4
+MAX_MESSAGE_LINES = 5
 
 
 @dataclass

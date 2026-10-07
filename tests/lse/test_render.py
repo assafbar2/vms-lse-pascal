@@ -59,12 +59,24 @@ def test_placeholders_are_highlighted(h):
     assert scr.role_at(0, 0) == "text"
 
 
-def test_long_messages_wrap_to_four_lines(hello):
+def test_long_messages_wrap_to_five_lines(hello):
     hello.editor.show("x" * 500, "E")
     scr = hello.screen
-    assert len(scr.regions["message"]) == 4
+    assert len(scr.regions["message"]) == 5
     assert scr.region("message")[-1].endswith("...")
     assert scr.role_at(scr.regions["message"][0], 0) == "message_error"
+
+
+def test_long_explanations_are_trimmed_before_the_hint(hello):
+    hello.editor.show("%LSE-E-COMPERR, X.PAS has 1 error.\n"
+                      "%PASCAL-E-SEMIEXP, \";\" expected at line 5, column 3\n"
+                      "  Explanation: " + "words " * 60 + "\n"
+                      "  Hint: Add \";\" at the end of line 4.", "E")
+    lines = hello.screen.region("message")
+    assert len(lines) == 5
+    assert lines[0].startswith("%LSE-E-COMPERR")
+    assert lines[2].startswith("  Explanation:") and lines[3].endswith("...")
+    assert lines[4] == '  Hint: Add ";" at the end of line 4.'
 
 
 def test_horizontal_scroll_keeps_cursor_visible(tmp_path):

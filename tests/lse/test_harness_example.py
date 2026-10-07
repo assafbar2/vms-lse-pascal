@@ -66,7 +66,7 @@ def test_newcomer_builds_guess_with_templates(tmp_path):
     h.press("F5")
     assert "%LSE-S-RAN, GUESS.EXE finished" in h.message
     assert h.editor.buffers["$OUTPUT"].lines == [
-        "I am thinking of a number from 1 to 100.", "Your guess? "]
+        "I am thinking of a number from 1 to 100.", "Your guess? 50"]
     assert h.host.transcripts[-1].startswith("Running GUESS.EXE.")
     assert h.ls() == ["GUESS.DIA", "GUESS.EXE", "GUESS.MAP", "GUESS.OBJ", "GUESS.PAS",
                       "GUESS.PAS;1"]

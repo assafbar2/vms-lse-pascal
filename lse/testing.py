@@ -227,6 +227,7 @@ class RunResult:
     output: str
     error: Diagnostic | None = None
     traceback: list[str] = field(default_factory=list)
+    transcript: str = ""
 
 
 @dataclass
@@ -255,6 +256,12 @@ MESSAGES = {
     ("LINK", "OPENIN"): MessageInfo(
         "LINK", "OPENIN", "F", "cannot open {0}",
         "The object file does not exist.", "COMPILE the program first."),
+    ("LINK", "UNDFSYMS"): MessageInfo(
+        "LINK", "UNDFSYMS", "W", "undefined symbol {0}",
+        "The program uses a name that no module defines.", "Check the spelling, or LINK the module that defines it."),
+    ("LINK", "NOIMGFIL"): MessageInfo(
+        "LINK", "NOIMGFIL", "E", "image file not created",
+        "LINK found errors, so it did not write the .EXE.", "Fix the messages above, then LINK again."),
     ("PAS", "DIVBYZERO"): MessageInfo(
         "PAS", "DIVBYZERO", "F", "division by zero",
         "The program tried to divide by zero.", "Check the value before you divide."),
@@ -269,10 +276,12 @@ class FakePascalApi:
     * ``compile_file`` reports every leftover placeholder as
       ``%PASCAL-E-PLACEHOLDER`` and every line containing ``SYNTAXERROR`` as
       ``%PASCAL-E-SYNTAX``; otherwise it writes ``.OBJ`` and ``.DIA``.
-    * ``link`` writes ``.EXE`` and ``.MAP`` that point back at the source.
+    * ``link`` writes ``.EXE`` and ``.MAP`` that point back at the source; a
+      source line containing ``UNDEFINEDSYM`` gives ``%LINK-W-UNDFSYMS`` there.
     * ``run_image`` "runs" the source: it prints the string literals of each
       ``WRITE``/``WRITELN`` and consumes a line of input for each
-      ``READLN``; a line containing ``DIVBYZERO`` raises that runtime error.
+      ``READLN`` (shown in ``transcript``); a line containing ``DIVBYZERO``
+      raises that runtime error. Exit status 0, or 1 after an error.
 
     Every call is recorded in ``calls`` as ``(name, args)``.
     """
@@ -337,6 +346,13 @@ class FakePascalApi:
                                   None, None)
         with open(obj_paths[0], encoding="utf-8") as f:
             source = f.read().split("SOURCE ", 1)[1].strip()
+        with open(source, encoding="utf-8") as f:
+            for n, line in enumerate(f.read().split("\n"), 1):
+                if "UNDEFINEDSYM" in line:
+                    col = line.index("UNDEFINEDSYM") + 1
+                    return LinkResult(False, [
+                        self._diag(source, n, col, "LINK", "UNDFSYMS", "UNDEFINEDSYM"),
+                        self._diag(None, None, None, "LINK", "NOIMGFIL")], None, None)
         exe = output or os.path.splitext(obj_paths[0])[0] + ".EXE"
         with open(exe, "w", encoding="utf-8") as f:
             f.write(f"IMAGE FAKE\nSOURCE {source}\n")
@@ -348,38 +364,43 @@ class FakePascalApi:
         return LinkResult(True, [], exe, mp)
 
     def run_image(self, exe_path, *, input_text: str | None = None, stdin=None, stdout=None,
-                  seed: int | None = None) -> RunResult:
+                  seed: int | None = None, explain: bool = True) -> RunResult:
         self.calls.append(("run_image", (str(exe_path), input_text, seed)))
+        self.last_explain = explain
         with open(exe_path, encoding="utf-8") as f:
             source = f.read().split("SOURCE ", 1)[1].strip()
         with open(source, encoding="utf-8") as f:
             text = f.read()
         pending = (input_text or "").split("\n") if input_text is not None else None
         out: list[str] = []
+        transcript: list[str] = []
 
         def emit(s: str) -> None:
             out.append(s)
+            transcript.append(s)
             if stdout is not None:
                 stdout.write(s)
 
         for n, line in enumerate(text.split("\n"), 1):
             if "DIVBYZERO" in line:
                 err = self._diag(source, n, None, "PAS", "DIVBYZERO")
-                return RunResult(2, "".join(out), err,
+                return RunResult(1, "".join(out), err,
                                  ["%TRACE-F-TRACEBACK, symbolic stack dump follows",
-                                  f"  module FAKE  line {n}"])
+                                  f"  module FAKE  line {n}"], "".join(transcript))
             for m in _IO.finditer(line):
                 kind = m.group(1).upper()
                 if kind == "READLN":
+                    typed = ""
                     if pending is not None:
-                        pending.pop(0) if pending else None
+                        typed = pending.pop(0) if pending else ""
                     elif stdin is not None:
-                        stdin.readline()
+                        typed = stdin.readline().rstrip("\n")
+                    transcript.append(typed + "\n")
                     continue
                 emit("".join(s.replace("''", "'") for s in _STR.findall(m.group(2) or "")))
                 if kind == "WRITELN":
                     emit("\n")
-        return RunResult(1, "".join(out))
+        return RunResult(0, "".join(out), transcript="".join(transcript))
 
     def get_message(self, facility: str, ident: str) -> MessageInfo:
         return MESSAGES[(facility.upper(), ident.upper())]

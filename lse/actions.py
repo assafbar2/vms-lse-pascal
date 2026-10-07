@@ -15,7 +15,7 @@ from .keys import describe_key
 from .langdef import MenuOption, PlaceholderDef
 from .overlays import KeyTestOverlay, MenuItem
 from .themes import THEMES, theme_names
-from .toolchain import ToolchainUnavailable, format_diagnostic
+from .toolchain import ToolchainUnavailable, format_diagnostic, run_text
 
 if TYPE_CHECKING:
     from .editor import Editor
@@ -1089,6 +1089,10 @@ def _do_link(ed: "Editor", names: str | None, map_file: bool) -> bool:
         ed.success("LINKED", f"{ed.relative(exe)} written{extra}")
         return True
     text = "%LSE-E-LINKERR, LINK failed."
+    if any(getattr(d, "line", None) for d in diags):
+        ed.review = Review(diags, buf)
+        fill_review_buffer(ed)
+        text += " Press F8 to go to where the missing name is used."
     if diags:
         text += "\n" + format_diagnostic(diags[0], ed.explain_messages)
     ed.show(text, "E")
@@ -1130,16 +1134,19 @@ def _do_run(ed: "Editor", name: str | None, seed: int | None, input_text: str | 
         ed.error("NOIMAGE", f"{ed.relative(exe)} does not exist; LINK makes it")
         return False
     label = os.path.basename(exe)
+    explain = ed.explain_messages
     if input_text is not None:
         text_in = input_text.replace("\\n", "\n")
-        result = _call(ed, "RUN", lambda: ed.toolchain.run(exe, input_text=text_in, seed=seed))
+        result = _call(ed, "RUN", lambda: ed.toolchain.run(
+            exe, input_text=text_in, seed=seed, explain=explain))
     else:
         before = (f"Running {label}. Type your answers and press RETURN. "
                   "Ctrl-C stops the program.")
         after = "Program finished. Press RETURN to go back to LSE."
         result = _call(ed, "RUN", lambda: ed.host.run_program(
             before, after,
-            lambda stdin, stdout: ed.toolchain.run(exe, stdin=stdin, stdout=stdout, seed=seed)))
+            lambda stdin, stdout: ed.toolchain.run(exe, stdin=stdin, stdout=stdout, seed=seed,
+                                                   explain=explain)))
     if result is None:
         ed.warn("INTERRUPTED", f"{label} was stopped with Ctrl-C")
         return False
@@ -1147,14 +1154,18 @@ def _do_run(ed: "Editor", name: str | None, seed: int | None, input_text: str | 
         st.ran_state = st.linked_state
         st.run_result = result
     out = ed.system_buffer("$OUTPUT")
-    text = result.output or ""
+    text = run_text(result)
     lines = text.split("\n")
     if lines and lines[-1] == "":
         lines.pop()
     error = getattr(result, "error", None)
     if error is not None:
-        lines += [""] + format_diagnostic(error, ed.explain_messages).split("\n")
-        lines += list(getattr(result, "traceback", []) or [])
+        formatted = format_diagnostic(error, ed.explain_messages).split("\n")
+        if formatted[0] not in text:
+            lines += [""] + formatted
+        trace = list(getattr(result, "traceback", []) or [])
+        if trace and trace[0] not in text:
+            lines += trace
     out.load_text(lines or ["(the program printed nothing)"])
     if error is not None:
         ed.show(format_diagnostic(error, ed.explain_messages)
