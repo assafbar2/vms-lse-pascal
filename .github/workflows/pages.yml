@@ -1,0 +1,146 @@
+name: Web (GitHub Pages)
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  SITE_URL: https://assafbar2.github.io/vms-lse-pascal/
+
+jobs:
+  build:
+    name: Build the site
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      build_id: ${{ steps.build.outputs.build_id }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install Pyodide, xterm.js and the font
+        working-directory: web
+        run: npm ci
+      - name: Build web/dist
+        id: build
+        run: |
+          python web/build.py
+          echo "build_id=$(grep -o 'main\.js?v=[0-9a-f]*' web/dist/index.html | cut -d= -f2)" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: site
+          path: web/dist
+          retention-days: 7
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: web/dist
+
+  e2e:
+    name: Tutorial in ${{ matrix.browser }}
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install Playwright
+        working-directory: web
+        run: |
+          npm ci
+          npx playwright install --with-deps ${{ matrix.browser }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: site
+          path: web/dist
+      - name: Play the tutorial
+        working-directory: web
+        run: npx playwright test --project=${{ matrix.browser }}
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-${{ matrix.browser }}
+          path: web/test-results
+          retention-days: 7
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    needs: [build, e2e]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  live:
+    name: Tutorial on the live site
+    needs: [build, deploy]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install Playwright
+        working-directory: web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Wait for the new build to be served
+        env:
+          BUILD_ID: ${{ needs.build.outputs.build_id }}
+        run: |
+          for i in $(seq 1 60); do
+            if curl -fsS "$SITE_URL?nocache=$i" | grep -q "main.js?v=$BUILD_ID"; then
+              echo "build $BUILD_ID is live"; exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::$SITE_URL is not serving build $BUILD_ID after 10 minutes"
+          exit 1
+      - name: Play the tutorial on the live site
+        working-directory: web
+        env:
+          LSE_WEB_URL: ${{ env.SITE_URL }}
+        run: npx playwright test --project=chromium
