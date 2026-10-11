@@ -89,6 +89,7 @@ def test_link_map_opens_read_only_and_ctrl_o_enter_goes_back(h):
 
 def test_ctrl_c_during_run_stops_the_program(h):
     h.open("GUESS.PAS")
+    h.editor.run_seed = 7  # the secret is 32, so the first guess is not a lucky win
     h.host.program_input = "50\n\x03\n"
     h.press("F5")
     assert "Program stopped. Press RETURN" in h.host.transcripts[-1]

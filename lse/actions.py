@@ -716,15 +716,26 @@ def _help_named(ed: "Editor", kind: str, name: str) -> None:
 # ============================================================================
 
 
-def _save(ed: "Editor", buf: Buffer, path: str | None = None) -> None:
+def _save(ed: "Editor", buf: Buffer, path: str | None = None) -> bool:
+    """Save ``buf`` (as ``path``); a name or disk problem becomes a message."""
     if path is not None and not os.path.isabs(path):
         path = os.path.join(ed.cwd, path)
-    version = buf.save(path)
+    target = files.split_version(path)[0] if path is not None else buf.path or ""
+    problem = files.name_problem(os.path.basename(target))
+    if problem:
+        ed.error("BADNAME", f"cannot write {os.path.basename(target) or buf.name}: {problem}")
+        return False
+    try:
+        version = buf.save(path)
+    except OSError as e:
+        ed.error("WRITEERR", f"cannot write {ed.relative(target)}: {e.strerror or e}")
+        return False
     if buf.language is None:
         buf.language = ed.languages.for_file(buf.path or "")
     n = len(buf.lines)
     ed.info("WRITTEN", f"{n} line{'s' if n != 1 else ''} written to file "
             f"{ed.relative(buf.path)};{version}")
+    return True
 
 
 def _ask_file_name(ed: "Editor", buf: Buffer, then: Callable[[], Any] | None = None) -> None:
@@ -732,8 +743,7 @@ def _ask_file_name(ed: "Editor", buf: Buffer, then: Callable[[], Any] | None = N
         if not name.strip():
             ed.info("CANCELLED", "not saved")
             return
-        _save(ed, buf, name.strip())
-        if then:
+        if _save(ed, buf, name.strip()) and then:
             then()
 
     ed.prompt(f"Write {buf.name} to file: ", submit,
@@ -852,7 +862,8 @@ def _quit_saving(ed: "Editor", bufs: list[Buffer]) -> None:
         if not buf.modified:
             continue
         if buf.path:
-            _save(ed, buf)
+            if not _save(ed, buf):
+                return
         else:
             ed.show_buffer(buf)
             _ask_file_name(ed, buf, then=lambda: _quit_saving(ed, bufs))
@@ -992,8 +1003,8 @@ def _do_compile(ed: "Editor", list_file: bool) -> bool:
     if not buf.path:
         ed.error("NOFILE", f"{buf.name} has no file name yet; save it first with Ctrl-S")
         return False
-    if buf.modified:
-        buf.save()
+    if buf.modified and not _save(ed, buf):
+        return False
     result = _call(ed, "COMPILE", lambda: ed.toolchain.compile(buf.path, list_file=list_file))
     st = ed.build_for(buf)
     st.compiled_state = buf.state_id

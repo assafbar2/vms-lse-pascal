@@ -17,15 +17,19 @@ def find_file(name: str, extension: str) -> Path | None:
     p = Path(name)
     has_ext = "." in strip_version(p.name)
     candidates = [p] if has_ext else [p.with_name(p.name + extension), p.with_name(p.name + extension.lower()), p]
-    for c in candidates:
-        if c.is_file():
-            return c
     directory = p.parent
-    want = {strip_version(c.name).upper() for c in candidates}
     try:
         entries = sorted(os.listdir(directory))
     except OSError:
+        entries = None
+    # Compare with the directory listing, not is_file(): on a file system that
+    # ignores case (Windows, macOS) "hello.PAS" "exists" when the file is hello.pas.
+    for c in candidates:
+        if (entries is None or c.name in entries) and c.is_file():
+            return c
+    if entries is None:
         return None
+    want = {strip_version(c.name).upper() for c in candidates}
     best = None
     best_version = -1
     for entry in entries:
