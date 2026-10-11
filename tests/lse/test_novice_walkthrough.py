@@ -30,6 +30,10 @@ class Newcomer:
         if not h.editor.overlays:
             assert h.lesson or "Lesson " in h.status, f"lesson lost after {what}\n{h.dump()}"
             assert "Quit" in h.key_bar or "Back" in h.key_bar, h.key_bar
+        win = h.tutor.window
+        if win is not None and h.editor.window is not win:
+            assert win.top == 0, f"the lesson scrolled after {what}\n{h.dump()}"
+            assert len(h.tutor.lesson_buffer.lines) <= win.fixed_height - 2, what
 
     def do(self, spec, typed=None):
         """Press keys one at a time, checking the guidance after each."""

@@ -57,6 +57,10 @@ IDLE_NUDGE_SECONDS = 60
 STUCK_FAILURES = 2
 LESSON_BUFFER = "$LESSON"
 STUCK = "Stuck? Press F4 for a hint. "
+#: rows under the windows with the guidance layer on: NEXT, one message line, key bar
+BOTTOM_ROWS = 3
+#: rows the program window keeps (text and status line) next to the lesson
+CODE_ROWS = 10
 
 
 @dataclass
@@ -169,6 +173,7 @@ class Tutor:
         self._finished_now = False
         #: after a jump or resume, wait for something new before passing the step
         self._hold: tuple | None = None
+        self._needed: dict[int, int] = {}
 
     # ----- where things are ---------------------------------------------------
 
@@ -237,11 +242,10 @@ class Tutor:
         self.update()
         n = self.index + 1
         if had_progress and self.index > 0:
-            ed.info("TUTORIAL", f"welcome back: step {n} of {self.total}, {self.step.title}. "
-                    "The lesson window below says what to do")
+            ed.info("TUTORIAL", f"welcome back: step {n} of {self.total}. The lesson is below")
         else:
-            ed.info("TUTORIAL", f"step {n} of {self.total}: {self.step.title}. "
-                    "Read the lesson window below; NEXT says what to press")
+            ed.info("TUTORIAL", f"step {n} of {self.total}. The lesson is below; NEXT says "
+                    "what to press")
         if not had_progress and existed and buf is not None and not self._is_blank(buf):
             self._offer_fresh_file(buf)
 
@@ -838,54 +842,50 @@ class Tutor:
         self.refresh_lesson()
         ed.info("LESSON", "lesson shown (Ctrl-L hides it)")
 
+    def _text_width(self) -> int:
+        """Columns for lesson text: the window's inside, less a margin."""
+        return max(20, self.ed.width - 4)
+
     def _height(self) -> int:
-        lines = len(self.lesson_buffer.lines)
-        room = max(5, (self.ed.height - 3) // 2 + 1)
-        return max(5, min(lines + 2, room))
+        """Rows for the lesson window: enough for the longest step, leaving the
+        program at least CODE_ROWS rows. The same for the whole tutorial, so the
+        program window does not jump from step to step."""
+        room = max(5, (self.ed.height - BOTTOM_ROWS) - CODE_ROWS)
+        return max(5, min(self.needed_rows(self._text_width()) + 2, room))
+
+    def needed_rows(self, width: int) -> int:
+        """Lines the tallest step needs at this width, over every DO item and hint."""
+        if width not in self._needed:
+            most = 0
+            for step in self.lesson.steps:
+                for status in _every_status(step):
+                    for hint in range(len(step.hints) + 1):
+                        most = max(most, len(render_step(step, status, hint, width)[0]))
+            self._needed[width] = most
+        return self._needed[width]
 
     def lesson_lines(self) -> tuple[list[str], int | None]:
         """The lesson window text, and the row of the current DO item."""
+        rows = self._height() - 2
+        return render_step(self.step, self.status, self.hint_level, self._text_width(), rows)
+
+    def full_step_lines(self, width: int) -> list[str]:
+        """The whole step, nothing shortened (WHAT NOW shows it)."""
         step = self.step
-        width = max(20, self.ed.width - 4)
-        out: list[str] = []
+        out = [f"Lesson {self.index + 1} of {self.total}: {step.title}"]
         for para in step.text:
             out += textwrap.wrap(para, width) or [""]
-        current_row = None
-        st = self.status
-        label = "TRY THIS: " if step.final else "DO THIS:  "
-        pad = " " * len(label)
         for i, item in enumerate(step.items):
-            if step.final:
-                mark = " * "
-            elif i < len(st.done) and st.done[i]:
-                mark = "[x]"
-            elif i == st.current:
-                mark = "==>"
-            else:
-                mark = "[ ]"
-            body = textwrap.wrap(f"{i + 1}. {item.text}", width - len(pad) - 4) or [""]
-            if i == st.current and not step.final:
-                current_row = len(out)
-            out.append(f"{label if i == 0 else pad}{mark} {body[0]}")
-            out += [f"{pad}       {b}" for b in body[1:]]
-            if i == st.current and self.hint_level and not step.final:
-                out += self._hint_lines(width, len(pad) + 4)
-        if not step.items and self.hint_level and not step.final:
-            out += self._hint_lines(width, 4)
+            done = i < len(self.status.done) and self.status.done[i]
+            mark = "*" if step.final else ("[x]" if done else "[ ]")
+            out += textwrap.wrap(f"{i + 1}. {item.text}", width, initial_indent=f"  {mark} ",
+                                 subsequent_indent=" " * (len(mark) + 6))
         if step.see:
-            see = ("YOU WILL SEE: " if not step.final else "") + step.see
-            out += textwrap.wrap(see, width, subsequent_indent=" " * 14) or [""]
-        return out, current_row
-
-    def _hint_lines(self, width: int, indent: int) -> list[str]:
-        hints = self.step.hints
-        n = len(hints) + 1
-        level = min(self.hint_level, len(hints))
-        if level <= 0:
-            return []
-        more = "  (F4 again: show me)" if level == len(hints) else "  (F4: more help)"
-        return textwrap.wrap(f"Hint {level} of {n}: {hints[level - 1]}{more}", width,
-                             initial_indent=" " * indent, subsequent_indent=" " * (indent + 3))
+            out += textwrap.wrap(("You will see: " if not step.final else "") + step.see, width)
+        for level in range(1, min(self.hint_level, len(step.hints)) + 1):
+            out += textwrap.wrap(f"Hint {level}: {step.hints[level - 1]}", width,
+                                 subsequent_indent="   ")
+        return out
 
     def refresh_lesson(self) -> None:
         if not self.active:
@@ -934,8 +934,11 @@ class Tutor:
             self.refresh_lesson()
             more = "F4 again for more help" if self.hint_level < len(step.hints) else \
                 "F4 again shows you the answer"
-            ed.show(f"Hint {self.hint_level} of {len(step.hints) + 1}: "
-                    f"{step.hints[self.hint_level - 1]}\n({more})", "I")
+            n = f"Hint {self.hint_level} of {len(step.hints) + 1}"
+            if self.shown:
+                ed.show(f"{n} is at the top of the lesson; {more}", "I")
+            else:
+                ed.show(f"{n}: {step.hints[self.hint_level - 1]}\n({more})", "I")
             return
         self.hint_level = len(step.hints) + 1
         self.show_me()
@@ -1038,6 +1041,90 @@ class Tutor:
         if name == "ONE WINDOW":
             self.visible = False
         self.update()
+
+
+def _shorten(text: str, width: int) -> str:
+    if len(text) <= width:
+        return text
+    return textwrap.shorten(text, width=width, placeholder=" ...")
+
+
+def _cut(lines: list[str], n: int, width: int) -> list[str]:
+    """Keep the first ``n`` lines, marking that something was left out."""
+    if len(lines) <= n:
+        return lines
+    kept = lines[:max(1, n)]
+    kept[-1] = _shorten(kept[-1] + " ...", width)
+    return kept
+
+
+def render_step(step: Step, status: StepStatus, hint_level: int, width: int,
+                rows: int | None = None) -> tuple[list[str], int | None]:
+    """The lesson window text for a step, and the row of the current DO item.
+
+    The current DO item is shown in full and the others on one line each; a
+    hint takes the place of the explanation at the top. If ``rows`` is still
+    too few (a small terminal), YOU WILL SEE and then the explanation are cut
+    short before anything has to scroll.
+    """
+    label = "TRY THIS: " if step.final else "DO THIS:  "
+    pad = " " * len(label)
+    body_width = width - len(pad) - 7          # after "[x] " and "1. "
+    top: list[str] = []
+    hints = step.hints
+    level = min(hint_level, len(hints))
+    if level > 0 and not step.final:
+        more = "(F4 again: show me)" if level == len(hints) else "(F4: more help)"
+        top = textwrap.wrap(f"Hint {level} of {len(hints) + 1}: {hints[level - 1]}  {more}",
+                            width, subsequent_indent="   ")
+    else:
+        for para in step.text:
+            top += textwrap.wrap(para, width) or [""]
+    items: list[list[str]] = []
+    current_item = None if step.final else status.current
+    for i, item in enumerate(step.items):
+        if step.final:
+            mark = " * "
+        elif i < len(status.done) and status.done[i]:
+            mark = "[x]"
+        elif i == current_item:
+            mark = "==>"
+        else:
+            mark = "[ ]"
+        if step.final or i == current_item:
+            body = textwrap.wrap(item.text, body_width) or [""]
+        else:
+            body = [_shorten(item.text, body_width)]
+        lines = [f"{label if i == 0 else pad}{mark} {i + 1}. {body[0]}"]
+        lines += [f"{pad}       {b}" for b in body[1:]]
+        items.append(lines)
+    see: list[str] = []
+    if step.see:
+        prefix = "" if step.final else "YOU WILL SEE: "
+        see = textwrap.wrap(prefix + step.see, width, subsequent_indent=" " * len(prefix)) or [""]
+    if rows is not None:
+        over = len(top) + sum(map(len, items)) + len(see) - rows
+        if over > 0 and len(see) > 1:
+            cut = min(over, len(see) - 1)
+            see, over = _cut(see, len(see) - cut, width), over - cut
+        if over > 0 and len(top) > 1:
+            cut = min(over, len(top) - 1)
+            top, over = _cut(top, len(top) - cut, width), over - cut
+    out = list(top)
+    current_row = None
+    for i, lines in enumerate(items):
+        if i == current_item:
+            current_row = len(out)
+        out += lines
+    return out + see, current_row
+
+
+def _every_status(step: Step) -> list[StepStatus]:
+    """One status per DO item being the current one (for measuring the step)."""
+    if step.final or not step.items:
+        return [StepStatus([], None)]
+    n = len(step.items)
+    return [StepStatus([j < k for j in range(n)], k) for k in range(n)]
 
 
 def pattern_summary(pattern: str) -> str:

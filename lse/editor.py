@@ -23,6 +23,7 @@ Extension points for later layers (tutor, NEXT line, key bar):
 
 from __future__ import annotations
 
+import errno
 import os
 import time
 import traceback
@@ -408,6 +409,9 @@ class Editor:
             self.info("BUFFER", f"now editing {existing.display_name}")
             return existing
         base, lines, version = files.load(path)
+        problem = files.name_problem(os.path.basename(base)) if lines is None else None
+        if problem:
+            raise OSError(errno.EINVAL, problem)
         lang = self.languages.for_file(base)
         buf = self._load_buffer(base, lines, version, lang, window)
         if self.languages.errors and not self._language_errors_shown:

@@ -12,6 +12,7 @@ Run ``python -m pascal.rtl`` to regenerate ``PASRTL.OLB``.
 from __future__ import annotations
 
 import math
+import os
 import re
 import time
 from pathlib import Path
@@ -325,7 +326,9 @@ class Runtime:
 
     # -- random numbers --------------------------------------------------------
     def randomize(self):
-        seed = self.seed if self.seed is not None else time.time_ns() // 1000
+        # The clock alone repeats on Windows, where it ticks in milliseconds or coarser.
+        seed = self.seed if self.seed is not None else \
+            time.time_ns() ^ int.from_bytes(os.urandom(4), "little")
         self.rng = Lcg(seed)
 
     def random(self, n: int) -> int:

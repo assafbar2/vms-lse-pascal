@@ -61,18 +61,14 @@ def resolve_name(directory: str, name: str, default_type: str | None = None) -> 
     """Find an existing file for ``name`` the way a forgiving VMS user expects.
 
     Tries the exact name, then a case-insensitive match, then (when the
-    name has no file type) the name with ``default_type`` added. Returns
-    the path to use, which may not exist yet.
+    name has no file type) the name with ``default_type`` added. An existing
+    file comes back spelled as it is on disk, also on file systems that
+    ignore case (Windows, macOS). Returns the path to use, which may not
+    exist yet.
     """
     base, ver = split_version(name)
     path = base if os.path.isabs(base) else os.path.join(directory, base)
     suffix = "" if ver is None else f";{ver}"
-
-    def exists(p: str) -> bool:
-        return os.path.exists(p) or bool(list_versions(p))
-
-    if exists(path):
-        return path + suffix
     folder, leaf = os.path.split(path)
     candidates = [leaf]
     if default_type and "." not in leaf:
@@ -81,18 +77,53 @@ def resolve_name(directory: str, name: str, default_type: str | None = None) -> 
         entries = os.listdir(folder or ".")
     except OSError:
         entries = []
-    plain = {}
+    exact: set[str] = set()
+    by_case: dict[str, str] = {}
     for entry in entries:
-        plain.setdefault(split_version(entry)[0].lower(), split_version(entry)[0])
+        plain = split_version(entry)[0]
+        exact.add(plain)
+        by_case.setdefault(plain.lower(), plain)
     for cand in candidates:
-        if exists(os.path.join(folder, cand)):
+        if cand in exact:
             return os.path.join(folder, cand) + suffix
-        found = plain.get(cand.lower())
+        found = by_case.get(cand.lower())
         if found:
             return os.path.join(folder, found) + suffix
+    if os.path.exists(path):
+        return path + suffix
     if default_type and "." not in leaf:
         return path + default_type + suffix
     return path + suffix
+
+
+_WINDOWS_BAD = set('<>:"/\\|?*') | {chr(c) for c in range(32)}
+_WINDOWS_RESERVED = {"CON", "PRN", "AUX", "NUL", *(f"COM{i}" for i in range(1, 10)),
+                     *(f"LPT{i}" for i in range(1, 10))}
+
+
+def name_problem(leaf: str, windows: bool | None = None) -> str | None:
+    """Why ``leaf`` cannot be a file name here, or None if it can.
+
+    Windows forbids ``< > : " / \\ | ? *``, control characters, names that
+    end in a dot or space, and device names such as CON or NUL (with any
+    file type). Elsewhere only NUL and ``/`` are out.
+    """
+    if windows is None:
+        windows = os.name == "nt"
+    leaf = split_version(leaf)[0]
+    if not leaf:
+        return "the file name is empty"
+    if not windows:
+        return "a file name cannot contain NUL or /" if ("\0" in leaf or "/" in leaf) else None
+    bad = sorted({c for c in leaf if c in _WINDOWS_BAD})
+    if bad:
+        shown = " ".join(repr(c)[1:-1] if c.isprintable() else f"\\x{ord(c):02x}" for c in bad)
+        return f"Windows does not allow {shown} in a file name"
+    if leaf.endswith((".", " ")):
+        return "Windows does not allow a file name to end with a dot or a space"
+    if leaf.split(".", 1)[0].upper() in _WINDOWS_RESERVED:
+        return f"{leaf.split('.', 1)[0].upper()} is a device name on Windows, not a file"
+    return None
 
 
 def read_lines(path: str) -> list[str]:

@@ -236,13 +236,19 @@ class Buffer:
     # ----- files ------------------------------------------------------------
 
     def save(self, path: str | None = None) -> int:
-        """Write a new version; return its number. ``path`` renames first."""
+        """Write a new version; return its number. ``path`` renames first
+        (and the old name comes back if the write fails)."""
+        old_path, old_name = self.path, self.name
         if path is not None:
             self.path = files.split_version(path)[0]
             self.name = os.path.basename(self.path)
         if not self.path:
             raise ValueError("buffer has no file name")
-        version = files.write_new_version(self.path, self.lines)
+        try:
+            version = files.write_new_version(self.path, self.lines)
+        except OSError:
+            self.path, self.name = old_path, old_name
+            raise
         self.version = version
         self.saved_state_id = self.state_id
         self.break_undo_group()

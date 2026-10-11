@@ -14,9 +14,8 @@ END LESSON
 STEP welcome
   TITLE "Welcome: your first program"
   TEXT
-    A program is a list of instructions for the computer; you will write a
-    game, Guess My Number. Words in %{...}% are placeholders: blanks LSE
-    leaves for you to fill in. Ctrl-Q quits at any time; TUTORIAL OFF just edits.
+    A program is a list of instructions. Words in %{...}% are blanks for you
+    to fill in. Ctrl-Q quits at any time; TUTORIAL OFF just edits.
   END TEXT
   DO "Press Tab to open the menu, then Enter to choose PROGRAM."
     NEXT "Press Tab to open the menu, then Enter to choose PROGRAM"
@@ -27,12 +26,11 @@ STEP welcome
   DO "Press Ctrl-K to erase %[declarations]%..., then Tab and Ctrl-K to erase %{statement}%... too."
     NEXT "Ctrl-K erases the placeholder; Tab goes to the next one, Ctrl-K again"
     CHECK NO_PLACEHOLDERS
-  DO "Press F5 (or Esc then 5). When the program has finished, press RETURN."
+  DO "Press F5 (or Esc 5): COMPILE checks and translates it, LINK adds ready-made parts, RUN starts it."
     NEXT "Press F5 to compile, link and run your program"
     CHECK RAN
-  SEE "COMPILE checks your program and translates it, LINK adds the ready-made parts it"
-  SEE "needs, and RUN starts it. It does nothing yet, but it works!"
-  HINT "Tab opens a menu or jumps to the next placeholder, typing replaces one, and Ctrl-K erases one you do not need."
+  SEE "Your program runs. It does nothing yet, but it works!"
+  HINT "Tab opens a menu or jumps to the next blank, typing replaces a blank, Ctrl-K erases one."
   HINT "Press: Tab, Enter, type Guess, Tab, Ctrl-K, Tab, Ctrl-K, then F5 and RETURN."
   SOLUTION
     PROGRAM Guess(INPUT, OUTPUT);
@@ -57,9 +55,9 @@ STEP say
   DO "Press F5 to run it again, then RETURN."
     NEXT "Press F5 to compile, link and run it"
     CHECK RAN
-  SEE "Your sentence on the screen. Programs talk to people with WRITELN."
+  SEE "Your sentence on the screen: programs talk with WRITELN."
   HINT "WRITELN(...) prints what is in the brackets. Text needs single quotes around it."
-  HINT "At the end of BEGIN press Enter, type WRITELN, Tab, then 'I am thinking of a number from 1 to 100.' and F5."
+  HINT "End of BEGIN, Enter, WRITELN, Tab, then 'I am thinking of a number from 1 to 100.' and F5."
   SOLUTION
     PROGRAM Guess(INPUT, OUTPUT);
     BEGIN
@@ -72,8 +70,7 @@ STEP mistake
   TITLE "Make a mistake on purpose"
   TEXT
     Everyone makes mistakes, and the compiler finds them for you. Pascal puts
-    a semicolon ; between the parts of a program. Remove one and see what
-    happens: the compiler explains the problem, and F8 takes you to it.
+    a ; between the parts of a program: remove one and see what happens.
   END TEXT
   DO "Delete the ; at the end of line 1: Ctrl-Home, End, then Backspace."
     NEXT "Ctrl-Home, End, Backspace: delete the ; at the end of line 1"
@@ -87,9 +84,8 @@ STEP mistake
   DO "Put the ; back at the end of line 1 (Up, End, type ;) and press F7 again."
     NEXT "Up, End, type ; to put it back, then F7 to compile again"
     CHECK COMPILES
-  SEE "%PASCAL-E-SEMIEXP, "";"" expected, with an explanation and a hint. After the fix:"
-  SEE "compiled with no errors."
-  HINT "The compiler reads on to the next line before it notices that the ; is missing, so F8 lands just after the gap."
+  SEE "%PASCAL-E-SEMIEXP, "";"" expected, then: no errors."
+  HINT "The compiler only notices the missing ; on the next line, so F8 lands just after the gap."
   HINT "Ctrl-Home, End, Backspace, F7, F8, then Up, End, type ; and F7."
   SOLUTION
     PROGRAM Guess(INPUT, OUTPUT);
@@ -102,9 +98,8 @@ END STEP
 STEP variables
   TITLE "Variables: boxes that hold values"
   TEXT
-    A variable is a named box that holds a value. Pascal wants to know what
-    kind of value goes in each box: INTEGER means whole numbers. Variables
-    are declared in a VAR section, before BEGIN.
+    A variable is a named box that holds a value; INTEGER says it holds whole
+    numbers. Variables are declared in a VAR section, before BEGIN.
   END TEXT
   DO "Go to the end of line 1 (Ctrl-Home, End), press Enter, type VAR and press Tab."
     NEXT "Ctrl-Home, End, Enter, then type VAR and press Tab"
@@ -125,9 +120,9 @@ STEP variables
   DO "Press F7 to compile."
     NEXT "Press F7 to compile"
     CHECK COMPILES
-  SEE "VAR and  secret, guess, tries : INTEGER;  just above BEGIN, and no errors."
+  SEE "secret, guess, tries : INTEGER; under VAR, and no errors."
   HINT "Several names can share one type: separate them with commas, then a colon and the type."
-  HINT "Ctrl-Home, End, Enter, VAR, Tab, type secret, guess, tries, Tab, Tab, Enter, Ctrl-K, F7."
+  HINT "Ctrl-Home, End, Enter, VAR, Tab, secret, guess, tries, Tab, Tab, Enter, Tab, Ctrl-K, F7."
   SOLUTION
     PROGRAM Guess(INPUT, OUTPUT);
     VAR
@@ -142,8 +137,7 @@ STEP secret
   TITLE "Pick a secret number"
   TEXT
     := means "becomes": secret := RANDOM(100) + 1 puts a number from 1 to 100
-    in the box called secret. RANDOMIZE shuffles the numbers, so every game is
-    different. A semicolon goes after each of these new statements.
+    in secret. RANDOMIZE makes every game different.
   END TEXT
   DO "Go to the end of the BEGIN line (arrow keys, then End), press Enter and type RANDOMIZE;"
     NEXT "End of the BEGIN line (arrows, End): Enter, then type RANDOMIZE;"
@@ -160,8 +154,7 @@ STEP secret
   DO "Find PAS$RANDOM: LINK took it from PASRTL, the run-time library. Then Ctrl-O and Enter go back."
     NEXT "Find PAS$RANDOM in the map, then Ctrl-O and Enter go back to GUESS.PAS"
     CHECK EDITING GUESS.PAS
-  SEE "In GUESS.MAP, PAS$RANDOM comes from PASRTL.OLB. LINK joins your code with ready-made"
-  SEE "routines like that one. That is what LINK is for."
+  SEE "PAS$RANDOM comes from PASRTL.OLB: that is what LINK is for."
   HINT "New statements go between BEGIN and END, one per line, with ; between them."
   HINT "Type exactly:  RANDOMIZE;  and on the next line  secret := RANDOM(100) + 1;  then F5."
   SOLUTION
@@ -179,17 +172,16 @@ END STEP
 STEP ask
   TITLE "Ask again and again"
   TEXT
-    REPEAT ... UNTIL is a loop: it runs the statements inside it again and
-    again, until the test after UNTIL is TRUE. WRITE prints a question and
-    READLN waits for the player to type a number into the box guess.
+    REPEAT ... UNTIL runs the statements inside it again and again, until the
+    test after UNTIL is TRUE. READLN waits for the player's number.
   END TEXT
   DO "At the end of the WRITELN line type ; and press Enter. Type REPEAT and press Tab."
     NEXT "End of the WRITELN line: type ; and Enter, then REPEAT and Tab"
     CHECK CONTAINS_STATEMENT "REPEAT %{statements}%... UNTIL %{test}%"
-  DO "Type WRITE and press Tab, then type 'Your guess? ' (quotes, and a space before the last quote), then Tab."
+  DO "Type WRITE and press Tab, then 'Your guess? ' (a space before the last quote) and Tab."
     NEXT "Type WRITE, Tab, then 'Your guess? ' and Tab"
     CHECK CONTAINS_STATEMENT "WRITE(%{text}%)"
-  DO "Type READLN and press Tab, then guess and Tab. Ctrl-K erases the extra %[statement]%..."
+  DO "Type READLN, Tab, guess and Tab. Then Ctrl-K erases the extra %[statement]%..."
     NEXT "Type READLN, Tab, guess, Tab; then Ctrl-K erases %[statement]%..."
     CHECK CONTAINS_STATEMENT "READLN(guess)"
   DO "Press Tab to go to %{boolean_expression}% and type guess = secret"
@@ -199,10 +191,9 @@ STEP ask
   DO "Press F5 and type a few numbers. There are no clues yet, so press Ctrl-C to stop it."
     NEXT "F5, type a few numbers (RETURN after each); Ctrl-C stops the program"
     CHECK RAN /STOPPED
-  SEE "Your guess? again and again. Type a letter instead of a number: the program"
-  SEE "explains what went wrong and asks again. Ctrl-C stops any program."
+  SEE "Your guess? again and again; type a letter and it asks again."
   HINT "Everything between REPEAT and UNTIL runs again and again until guess = secret is TRUE."
-  HINT "Type ; Enter REPEAT Tab WRITE Tab 'Your guess? ' Tab READLN Tab guess Tab Ctrl-K Tab guess = secret, then F5."
+  HINT "; Enter REPEAT Tab WRITE Tab 'Your guess? ' Tab READLN Tab guess Tab Ctrl-K Tab guess = secret, F5."
   SOLUTION
     PROGRAM Guess(INPUT, OUTPUT);
     VAR
@@ -222,9 +213,8 @@ END STEP
 STEP decide
   TITLE "Decide: too low, too high or correct?"
   TEXT
-    IF ... THEN ... ELSE chooses what to do. guess < secret is a test that is
-    TRUE or FALSE: < means less than, > means more than. ELSE IF tries a second
-    test when the first one was FALSE.
+    IF ... THEN ... ELSE chooses what to do. guess < secret is a test: < means
+    less than, > more than. ELSE IF tries a second test.
   END TEXT
   DO "At the end of the READLN(guess) line type ; and Enter, then type IF and press Tab."
     NEXT "End of the READLN(guess) line: type ; and Enter, then IF and Tab"
@@ -249,7 +239,7 @@ STEP decide
   CHECK RUN_OUTPUT_CONTAINS "Too high" /INPUT="101" /FAIL="when the guess is too big (101), the program should print Too high!"
   SEE "Your guess? 50  Too high!  ... until Correct!"
   HINT "The IF goes inside the loop, after READLN(guess), so every guess gets a clue."
-  HINT "After READLN(guess) type ; Enter IF Tab, guess < secret Tab WRITELN Tab 'Too low!' Tab, then Tab Down Enter for ELSE IF."
+  HINT "After READLN(guess): ; Enter IF Tab guess < secret Tab WRITELN Tab 'Too low!' Tab, then Tab Down Enter."
   SOLUTION
     PROGRAM Guess(INPUT, OUTPUT);
     VAR
@@ -275,9 +265,8 @@ END STEP
 STEP count
   TITLE "Count the tries"
   TEXT
-    tries := tries + 1 means: take the number in tries, add 1, and put the
-    result back in tries. The box must start at 0, before the loop. tries:1
-    prints the number without the spaces Pascal would put in front of it.
+    tries := tries + 1 takes the number in tries, adds 1 and puts it back, so
+    tries must start at 0. tries:1 prints it without spaces in front.
   END TEXT
   DO "At the end of the secret := line press Enter and type tries := 0;"
     NEXT "End of the secret := line: Enter, then type tries := 0;"
@@ -291,7 +280,7 @@ STEP count
   DO "Press F7 to compile."
     NEXT "Press F7 to compile"
     CHECK COMPILES
-  SEE "WRITELN('Correct! You got it in ', tries:1, ' tries.') and no errors."
+  SEE "WRITELN('Correct! You got it in ', tries:1, ' tries.')"
   HINT "WRITELN can print several things: separate them with commas, like 'text', tries:1, 'more text'."
   HINT "The last WRITELN should be: WRITELN('Correct! You got it in ', tries:1, ' tries.')"
   SOLUTION
@@ -357,12 +346,11 @@ END STEP
 STEP done
   TITLE "You did it!"
   TEXT
-    You wrote, compiled, linked and ran a real Pascal program. You used
-    variables, :=, WRITELN and READLN, IF ... THEN ... ELSE and a REPEAT loop.
-    If you like, try a challenge (HELP PASCAL explains more):
+    You wrote, compiled, linked and ran a real Pascal program with variables,
+    :=, WRITELN, READLN, IF and REPEAT. If you like, try a challenge:
   END TEXT
   DO "Stop after 10 tries: change the end of the loop to UNTIL (guess = secret) OR (tries = 10)"
   DO "Play again: put REPEAT ... UNTIL answer = 'N' round the game (answer is a CHAR)."
   DO "Move the guessing into a PROCEDURE (type PROCEDURE and press Tab above BEGIN)."
-  SEE "Ctrl-Q quits (your game stays in GUESS.PAS). Next time, lse GUESS.PAS opens it."
+  SEE "HELP PASCAL explains more. Ctrl-Q quits; your game stays in GUESS.PAS."
 END STEP
