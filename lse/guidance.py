@@ -545,6 +545,10 @@ def what_now_lines(ed: "Editor") -> list[str]:
     from .helpscreen import keypad_lines
     lines = [" ".join(describe(ed)), "", "What to do next:", "    " + next_action(state_of(ed)),
              ""]
+    tutor = getattr(ed, "tutor", None)
+    if tutor is not None and tutor.active:
+        lines += ["The lesson step in full:", ""]
+        lines += ["    " + line for line in tutor.full_step_lines(max(20, ed.width - 12))] + [""]
     lines += ["The LSE keypad (HELP KEYPAD shows it alone, HELP KEYS lists every key):", ""]
     lines += keypad_lines(ed)
     lines += ["", "More help: HELP PASCAL explains the Pascal language, HELP COMMANDS lists the "

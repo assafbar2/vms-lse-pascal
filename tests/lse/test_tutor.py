@@ -151,10 +151,19 @@ def test_two_failed_compiles_suggest_a_hint(h):
 def test_hints_escalate_then_show_me(h):
     follow_tutorial(h, upto="say")
     h.press("F4")
-    assert h.message.startswith("Hint 1 of 3: WRITELN(...) prints")
-    assert "Hint 1 of 3" in lesson_text(h)
+    assert h.message.startswith("Hint 1 of 3 is at the top of the lesson")
+    assert h.tutor.lesson_buffer.lines[0].startswith("Hint 1 of 3: WRITELN(...) prints")
     h.press("F4")
-    assert h.message.startswith("Hint 2 of 3: At the end of BEGIN")
+    assert h.tutor.lesson_buffer.lines[0].startswith("Hint 2 of 3: End of BEGIN, Enter, WRITELN")
+    h.press("C-l")
+    h.press("F4")
+    assert isinstance(h.overlay, PreviewOverlay)
+    h.press("Esc")
+    h.tutor.hint_level = 1
+    h.press("F4")
+    assert h.message.startswith("Hint 2 of 3: End of BEGIN")  # lesson hidden: the hint itself
+    h.press("C-l")
+    h.tutor.hint_level = 2
     h.press("F4")
     assert isinstance(h.overlay, PreviewOverlay)
     text = h.screen.text()
