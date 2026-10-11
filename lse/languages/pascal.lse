@@ -1,0 +1,514 @@
+! Pascal templates for LSE.
+!
+! %{name}%  required placeholder      %[name]%  optional placeholder
+! a trailing ... means the placeholder can repeat (a list).
+!
+! The first /DESCRIPTION line is the one-line hint shown on the message
+! line when the cursor is on the placeholder; F1 shows all of it.
+
+DEFINE LANGUAGE PASCAL
+  /FILE_TYPES=(.PAS, .PASCAL)
+  /INITIAL_STRING="%{compilation_unit}%"
+  /TAB_INCREMENT=2
+END DEFINE
+
+! ---------------------------------------------------------------- units
+
+DEFINE PLACEHOLDER compilation_unit /LANGUAGE=PASCAL /TYPE=MENU
+  /DESCRIPTION="A PROGRAM you can run, or a MODULE of routines."
+  /DESCRIPTION="Most files are a PROGRAM. A MODULE holds procedures and functions that"
+  /DESCRIPTION="other programs use; LINK puts the pieces together."
+  /EXAMPLE="PROGRAM Guess(INPUT, OUTPUT);"
+  "PROGRAM"  /TOKEN
+  "MODULE"   /TOKEN
+END DEFINE
+
+DEFINE TOKEN PROGRAM /LANGUAGE=PASCAL
+  /DESCRIPTION="A whole program: name, declarations, statements."
+  /DESCRIPTION="The computer carries out the statements between BEGIN and END, one after"
+  /DESCRIPTION="another. INPUT and OUTPUT mean the program reads the keyboard and writes"
+  /DESCRIPTION="to the screen. The final END is followed by a full stop."
+  /EXAMPLE="PROGRAM Hello(INPUT, OUTPUT);"
+  /EXAMPLE="BEGIN"
+  /EXAMPLE="  WRITELN('Hello, world')"
+  /EXAMPLE="END."
+  "PROGRAM %{program_name}%(INPUT, OUTPUT);"
+  "%[declarations]%..."
+  "BEGIN"
+  "  %{statement}%..."
+  "END."
+END DEFINE
+
+DEFINE PLACEHOLDER program_name /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /DESCRIPTION="Your program's name: one word, starting with a letter."
+  /DESCRIPTION="Pick a name that says what the program does. It does not have to match"
+  /DESCRIPTION="the file name, but it is easier if it does."
+  /EXAMPLE="Guess"
+END DEFINE
+
+DEFINE TOKEN MODULE /LANGUAGE=PASCAL
+  /DESCRIPTION="Routines for other programs to use (no main BEGIN)."
+  /DESCRIPTION="Mark a routine [GLOBAL] to let other modules call it; the program that"
+  /DESCRIPTION="calls it declares it [EXTERNAL]. COMPILE each file, then LINK them together"
+  /DESCRIPTION="(LINK GUESS, MATHLIB)."
+  /EXAMPLE="MODULE MathLib;"
+  /EXAMPLE="[GLOBAL] FUNCTION Square(x : INTEGER) : INTEGER;"
+  /EXAMPLE="BEGIN"
+  /EXAMPLE="  Square := x * x"
+  /EXAMPLE="END;"
+  /EXAMPLE="END."
+  "MODULE %{module_name}%;"
+  "%[declarations]%..."
+  "END."
+END DEFINE
+
+DEFINE PLACEHOLDER module_name /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /DESCRIPTION="The module's name: one word, starting with a letter."
+  /EXAMPLE="MathLib"
+END DEFINE
+
+! --------------------------------------------------------- declarations
+
+DEFINE PLACEHOLDER declarations /LANGUAGE=PASCAL /TYPE=MENU /DUPLICATION=VERTICAL
+  /DESCRIPTION="Constants, types, variables and routines to declare."
+  /DESCRIPTION="Pascal wants everything declared before it is used. Choose VAR to make"
+  /DESCRIPTION="variables (boxes that hold values). Erase this with Ctrl-K if you need nothing."
+  /EXAMPLE="VAR"
+  /EXAMPLE="  secret, guess, tries : INTEGER;"
+  "VAR"        /TOKEN
+  "CONST"      /TOKEN
+  "TYPE"       /TOKEN
+  "PROCEDURE"  /TOKEN
+  "FUNCTION"   /TOKEN
+END DEFINE
+
+DEFINE TOKEN VAR /LANGUAGE=PASCAL
+  /DESCRIPTION="Declare variables: named boxes that hold values."
+  /DESCRIPTION="List the names, a colon, the type, and a semicolon. Several names can"
+  /DESCRIPTION="share one type: separate them with commas."
+  /EXAMPLE="VAR"
+  /EXAMPLE="  secret, guess, tries : INTEGER;"
+  /EXAMPLE="  done : BOOLEAN;"
+  "VAR"
+  "  %{identifier}%... : %{type}%;"
+  "  %[variable_declaration]%..."
+END DEFINE
+
+DEFINE PLACEHOLDER variable_declaration /LANGUAGE=PASCAL /DUPLICATION=VERTICAL
+  /DESCRIPTION="More variables: names : type;"
+  /EXAMPLE="done : BOOLEAN;"
+  "%{identifier}%... : %{type}%;"
+END DEFINE
+
+DEFINE TOKEN CONST /LANGUAGE=PASCAL
+  /DESCRIPTION="Declare constants: names for values that never change."
+  /DESCRIPTION="A constant makes a program easier to read and to change: write the"
+  /DESCRIPTION="number once, use the name everywhere."
+  /EXAMPLE="CONST"
+  /EXAMPLE="  MaxTries = 10;"
+  "CONST"
+  "  %{identifier}% = %{constant}%;"
+  "  %[constant_declaration]%..."
+END DEFINE
+
+DEFINE PLACEHOLDER constant_declaration /LANGUAGE=PASCAL /DUPLICATION=VERTICAL
+  /DESCRIPTION="Another constant: name = value;"
+  /EXAMPLE="Greeting = 'Hello';"
+  "%{identifier}% = %{constant}%;"
+END DEFINE
+
+DEFINE TOKEN TYPE /LANGUAGE=PASCAL
+  /DESCRIPTION="Declare your own types (ranges, arrays, records)."
+  /EXAMPLE="TYPE"
+  /EXAMPLE="  Digit = 0..9;"
+  /EXAMPLE="  Scores = ARRAY [1..10] OF INTEGER;"
+  "TYPE"
+  "  %{identifier}% = %{type}%;"
+  "  %[type_declaration]%..."
+END DEFINE
+
+DEFINE PLACEHOLDER type_declaration /LANGUAGE=PASCAL /DUPLICATION=VERTICAL
+  /DESCRIPTION="Another type: name = type;"
+  /EXAMPLE="Percent = 0..100;"
+  "%{identifier}% = %{type}%;"
+END DEFINE
+
+DEFINE PLACEHOLDER identifier /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /SEPARATOR=", " /DUPLICATION=HORIZONTAL
+  /DESCRIPTION="A name you choose: letters and digits, no spaces."
+  /DESCRIPTION="Upper and lower case are the same to Pascal (Tries and TRIES are one name)."
+  /DESCRIPTION="Where several names are allowed, separate them with commas."
+  /EXAMPLE="secret, guess, tries"
+END DEFINE
+
+DEFINE PLACEHOLDER constant /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /SEPARATOR=", " /DUPLICATION=HORIZONTAL
+  /DESCRIPTION="A fixed value: 100, 'Y', 'text', TRUE or FALSE."
+  /EXAMPLE="100"
+  /EXAMPLE="'Y'"
+END DEFINE
+
+! ---------------------------------------------------------------- types
+
+DEFINE PLACEHOLDER type /LANGUAGE=PASCAL /TYPE=MENU
+  /DESCRIPTION="What kind of value it holds: INTEGER = whole numbers."
+  /DESCRIPTION="INTEGER: whole numbers. REAL: numbers with a decimal point. BOOLEAN:"
+  /DESCRIPTION="TRUE or FALSE. CHAR: a single character. ARRAY and RECORD hold several."
+  /EXAMPLE="INTEGER"
+  "INTEGER"          /DESCRIPTION="whole numbers such as 42 or -7"
+  "REAL"             /DESCRIPTION="numbers with a fraction such as 3.14"
+  "BOOLEAN"          /DESCRIPTION="TRUE or FALSE"
+  "CHAR"             /DESCRIPTION="one character such as 'A'"
+  "subrange"         /PLACEHOLDER
+  "ARRAY"            /TOKEN
+  "RECORD"           /TOKEN
+  "type_identifier"  /PLACEHOLDER
+END DEFINE
+
+DEFINE PLACEHOLDER type_identifier /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /DESCRIPTION="A type name: INTEGER, REAL, BOOLEAN, CHAR or your own."
+  /EXAMPLE="INTEGER"
+END DEFINE
+
+DEFINE PLACEHOLDER subrange /LANGUAGE=PASCAL
+  /DESCRIPTION="A range of values, lowest..highest."
+  /DESCRIPTION="Two dots go between the lowest and the highest value."
+  /EXAMPLE="1..100"
+  "%{constant}%..%{constant}%"
+END DEFINE
+
+DEFINE TOKEN ARRAY /LANGUAGE=PASCAL
+  /DESCRIPTION="A row of boxes of the same type, numbered by an index."
+  /DESCRIPTION="scores[3] is the third box when the index runs 1..10."
+  /EXAMPLE="ARRAY [1..10] OF INTEGER"
+  "ARRAY [%{index_type}%...] OF %{type}%"
+END DEFINE
+
+DEFINE PLACEHOLDER index_type /LANGUAGE=PASCAL /TYPE=MENU
+  /SEPARATOR=", " /DUPLICATION=HORIZONTAL
+  /DESCRIPTION="What labels the boxes: usually a range like 1..10."
+  /EXAMPLE="1..10"
+  "subrange"         /PLACEHOLDER
+  "CHAR"             /DESCRIPTION="one box for every character"
+  "BOOLEAN"          /DESCRIPTION="two boxes: FALSE and TRUE"
+  "type_identifier"  /PLACEHOLDER
+END DEFINE
+
+DEFINE TOKEN RECORD /LANGUAGE=PASCAL
+  /DESCRIPTION="A group of named fields kept together."
+  /DESCRIPTION="The fields can have different types; write record.field to use one."
+  /EXAMPLE="RECORD"
+  /EXAMPLE="  name : CHAR;"
+  /EXAMPLE="  score : INTEGER"
+  /EXAMPLE="END"
+  "RECORD"
+  "  %{field_declaration}%..."
+  "END"
+END DEFINE
+
+DEFINE PLACEHOLDER field_declaration /LANGUAGE=PASCAL
+  /SEPARATOR=";" /DUPLICATION=VERTICAL
+  /DESCRIPTION="One or more field names, a colon and their type."
+  /EXAMPLE="score : INTEGER"
+  "%{identifier}%... : %{type}%"
+END DEFINE
+
+! ----------------------------------------------------------- routines
+
+DEFINE TOKEN PROCEDURE /LANGUAGE=PASCAL
+  /DESCRIPTION="A named group of statements you run by its name."
+  /DESCRIPTION="Procedures keep a program tidy: write the steps once, call them often."
+  /EXAMPLE="PROCEDURE SayHello;"
+  /EXAMPLE="BEGIN"
+  /EXAMPLE="  WRITELN('Hello')"
+  /EXAMPLE="END;"
+  "PROCEDURE %{procedure_name}%%[formal_parameters]%;"
+  "%[declarations]%..."
+  "BEGIN"
+  "  %{statement}%..."
+  "END;"
+END DEFINE
+
+DEFINE TOKEN FUNCTION /LANGUAGE=PASCAL
+  /DESCRIPTION="A routine that gives back a value."
+  /DESCRIPTION="Inside it, assign the result to the function's own name."
+  /EXAMPLE="FUNCTION Square(x : INTEGER) : INTEGER;"
+  /EXAMPLE="BEGIN"
+  /EXAMPLE="  Square := x * x"
+  /EXAMPLE="END;"
+  "FUNCTION %{function_name}%%[formal_parameters]% : %{result_type}%;"
+  "%[declarations]%..."
+  "BEGIN"
+  "  %{statement}%..."
+  "END;"
+END DEFINE
+
+DEFINE PLACEHOLDER procedure_name /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /DESCRIPTION="The procedure's name: one word saying what it does."
+  /EXAMPLE="AskForGuess"
+END DEFINE
+
+DEFINE PLACEHOLDER function_name /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /DESCRIPTION="The function's name: one word for what it computes."
+  /EXAMPLE="Square"
+END DEFINE
+
+DEFINE PLACEHOLDER formal_parameters /LANGUAGE=PASCAL
+  /DESCRIPTION="Values the routine receives. Ctrl-K if none."
+  /DESCRIPTION="Write them in brackets: names, a colon and a type, like (low, high : INTEGER)."
+  /EXAMPLE="(low, high : INTEGER)"
+  "(%{parameter_declaration}%...)"
+END DEFINE
+
+DEFINE PLACEHOLDER parameter_declaration /LANGUAGE=PASCAL /TYPE=MENU
+  /SEPARATOR="; " /DUPLICATION=HORIZONTAL
+  /DESCRIPTION="A parameter group: a copied value, or a VAR."
+  /DESCRIPTION="A VAR parameter lets the routine change the caller's variable."
+  /EXAMPLE="VAR count : INTEGER"
+  "value_parameter"  /PLACEHOLDER
+  "var_parameter"    /PLACEHOLDER
+END DEFINE
+
+DEFINE PLACEHOLDER value_parameter /LANGUAGE=PASCAL
+  /DESCRIPTION="Gets a copy of the value (the caller's stays the same)."
+  /EXAMPLE="low, high : INTEGER"
+  "%{identifier}%... : %{type_identifier}%"
+END DEFINE
+
+DEFINE PLACEHOLDER var_parameter /LANGUAGE=PASCAL
+  /DESCRIPTION="Works on the caller's own variable and can change it."
+  /EXAMPLE="VAR total : INTEGER"
+  "VAR %{identifier}%... : %{type_identifier}%"
+END DEFINE
+
+DEFINE PLACEHOLDER result_type /LANGUAGE=PASCAL /TYPE=MENU
+  /DESCRIPTION="The type of value the function gives back."
+  /EXAMPLE="INTEGER"
+  "INTEGER"          /DESCRIPTION="a whole number"
+  "REAL"             /DESCRIPTION="a number with a fraction"
+  "BOOLEAN"          /DESCRIPTION="TRUE or FALSE"
+  "CHAR"             /DESCRIPTION="one character"
+  "type_identifier"  /PLACEHOLDER
+END DEFINE
+
+! ---------------------------------------------------------- statements
+
+DEFINE PLACEHOLDER statement /LANGUAGE=PASCAL /TYPE=MENU
+  /SEPARATOR=";" /DUPLICATION=VERTICAL
+  /DESCRIPTION="One action: print, read, assign, decide or repeat."
+  /DESCRIPTION="Statements run one after another, top to bottom. Semicolons go between"
+  /DESCRIPTION="statements; LSE adds them for you when you pick from this menu. Type a"
+  /DESCRIPTION="word such as IF or WRITELN and press Tab, or press Tab here for the menu."
+  /EXAMPLE="WRITELN('I am thinking of a number from 1 to 100.')"
+  "WRITELN"         /TOKEN
+  "assignment"      /PLACEHOLDER
+  "IF"              /TOKEN
+  "REPEAT"          /TOKEN
+  "WHILE"           /TOKEN
+  "FOR"             /TOKEN
+  "READLN"          /TOKEN
+  "WRITE"           /TOKEN
+  "READ"            /TOKEN
+  "CASE"            /TOKEN
+  "BEGIN"           /TOKEN
+  "procedure_call"  /PLACEHOLDER
+END DEFINE
+
+DEFINE PLACEHOLDER assignment /LANGUAGE=PASCAL
+  /DESCRIPTION="Store a value: name := value (say 'becomes')."
+  /DESCRIPTION="The right-hand side is worked out first, so tries := tries + 1 adds one."
+  /EXAMPLE="secret := RANDOM(100) + 1"
+  "%{variable}% := %{expression}%"
+END DEFINE
+
+DEFINE PLACEHOLDER procedure_call /LANGUAGE=PASCAL
+  /DESCRIPTION="Run a procedure: its name and any values in brackets."
+  /EXAMPLE="RANDOMIZE"
+  /EXAMPLE="ShowScore(tries)"
+  "%{procedure_name}%%[actual_parameters]%"
+END DEFINE
+
+DEFINE PLACEHOLDER actual_parameters /LANGUAGE=PASCAL
+  /DESCRIPTION="Values to pass, in brackets, separated by commas."
+  /EXAMPLE="(tries, secret)"
+  "(%{expression}%...)"
+END DEFINE
+
+DEFINE PLACEHOLDER variable /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /SEPARATOR=", " /DUPLICATION=HORIZONTAL
+  /DESCRIPTION="The name of a variable you declared in VAR."
+  /EXAMPLE="guess"
+END DEFINE
+
+DEFINE PLACEHOLDER expression /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /SEPARATOR=", " /DUPLICATION=HORIZONTAL
+  /DESCRIPTION="A value: a number, a variable or a calculation."
+  /DESCRIPTION="Use + - * for arithmetic, DIV and MOD for whole-number division, and"
+  /DESCRIPTION="brackets to group."
+  /EXAMPLE="RANDOM(100) + 1"
+END DEFINE
+
+DEFINE PLACEHOLDER boolean_expression /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /DESCRIPTION="A test that is either TRUE or FALSE."
+  /DESCRIPTION="Compare with = <> < > <= >= and combine tests with AND, OR and NOT."
+  /DESCRIPTION="Put brackets round each comparison when you combine them."
+  /EXAMPLE="guess < secret"
+  /EXAMPLE="(tries > 5) AND (guess <> secret)"
+END DEFINE
+
+DEFINE TOKEN WRITELN /LANGUAGE=PASCAL
+  /DESCRIPTION="Print on the screen, then move to a new line."
+  /DESCRIPTION="Text goes in single quotes. Separate several items with commas; :n after"
+  /DESCRIPTION="a number sets its width (tries:1 prints it with no padding)."
+  /EXAMPLE="WRITELN('You got it in ', tries:1, ' tries.')"
+  "WRITELN(%{write_item}%...)"
+END DEFINE
+
+DEFINE TOKEN WRITE /LANGUAGE=PASCAL
+  /DESCRIPTION="Print on the screen and stay on the same line."
+  /DESCRIPTION="Good for a question just before READLN."
+  /EXAMPLE="WRITE('Your guess? ')"
+  "WRITE(%{write_item}%...)"
+END DEFINE
+
+DEFINE PLACEHOLDER write_item /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /SEPARATOR=", " /DUPLICATION=HORIZONTAL
+  /DESCRIPTION="What to print: 'text', a variable or a calculation."
+  /DESCRIPTION="Add :n after a number to set its width, e.g. tries:1."
+  /EXAMPLE="'Too low!'"
+  /EXAMPLE="tries:1"
+END DEFINE
+
+DEFINE TOKEN READLN /LANGUAGE=PASCAL
+  /DESCRIPTION="Wait for the user to type a line; store it."
+  /DESCRIPTION="What they type goes into the variables in brackets."
+  /EXAMPLE="READLN(guess)"
+  "READLN(%{variable}%...)"
+END DEFINE
+
+DEFINE TOKEN READ /LANGUAGE=PASCAL
+  /DESCRIPTION="Read values the user types (stays on the line)."
+  /EXAMPLE="READ(first, second)"
+  "READ(%{variable}%...)"
+END DEFINE
+
+DEFINE TOKEN IF /LANGUAGE=PASCAL
+  /DESCRIPTION="Choose: run a statement only if a test is TRUE."
+  /DESCRIPTION="Add ELSE to give another statement for when the test is FALSE."
+  /DESCRIPTION="Do not put a semicolon just before ELSE: the IF is not finished yet."
+  /EXAMPLE="IF guess < secret THEN"
+  /EXAMPLE="  WRITELN('Too low!')"
+  /EXAMPLE="ELSE"
+  /EXAMPLE="  WRITELN('Too high!')"
+  "IF %{boolean_expression}% THEN"
+  "  %{statement}%"
+  "%[else_part]%"
+END DEFINE
+
+DEFINE PLACEHOLDER else_part /LANGUAGE=PASCAL /TYPE=MENU
+  /DESCRIPTION="What to do when the test is FALSE (Ctrl-K: nothing)."
+  /EXAMPLE="ELSE"
+  /EXAMPLE="  WRITELN('Too high!')"
+  "else_branch"     /PLACEHOLDER
+  "else_if_branch"  /PLACEHOLDER
+END DEFINE
+
+DEFINE PLACEHOLDER else_branch /LANGUAGE=PASCAL
+  /DESCRIPTION="ELSE and one statement, run when the test is FALSE."
+  /EXAMPLE="ELSE"
+  /EXAMPLE="  WRITELN('Correct!')"
+  "ELSE"
+  "  %{statement}%"
+END DEFINE
+
+DEFINE PLACEHOLDER else_if_branch /LANGUAGE=PASCAL
+  /DESCRIPTION="ELSE IF: try another test when the first one was FALSE."
+  /EXAMPLE="ELSE IF guess > secret THEN"
+  /EXAMPLE="  WRITELN('Too high!')"
+  "ELSE IF %{boolean_expression}% THEN"
+  "  %{statement}%"
+  "%[else_part]%"
+END DEFINE
+
+DEFINE TOKEN CASE /LANGUAGE=PASCAL
+  /DESCRIPTION="Pick one of several statements by a value."
+  /EXAMPLE="CASE answer OF"
+  /EXAMPLE="  'Y', 'y' : WRITELN('Again!');"
+  /EXAMPLE="  'N', 'n' : WRITELN('Bye')"
+  /EXAMPLE="END"
+  "CASE %{expression}% OF"
+  "  %{case_element}%..."
+  "END"
+END DEFINE
+
+DEFINE PLACEHOLDER case_element /LANGUAGE=PASCAL
+  /SEPARATOR=";" /DUPLICATION=VERTICAL
+  /DESCRIPTION="Values, a colon, then the statement for them."
+  /EXAMPLE="1, 2 : WRITELN('small')"
+  "%{constant}%... : %{statement}%"
+END DEFINE
+
+DEFINE TOKEN WHILE /LANGUAGE=PASCAL
+  /DESCRIPTION="Repeat while a test stays TRUE (tested first)."
+  /DESCRIPTION="If the test is FALSE at the start, the statement never runs. Use BEGIN"
+  /DESCRIPTION="... END to repeat several statements."
+  /EXAMPLE="WHILE tries < 10 DO"
+  /EXAMPLE="  tries := tries + 1"
+  "WHILE %{boolean_expression}% DO"
+  "  %{statement}%"
+END DEFINE
+
+DEFINE TOKEN REPEAT /LANGUAGE=PASCAL
+  /DESCRIPTION="Repeat until a test becomes TRUE (tested after)."
+  /DESCRIPTION="The statements always run at least once."
+  /EXAMPLE="REPEAT"
+  /EXAMPLE="  READLN(guess)"
+  /EXAMPLE="UNTIL guess = secret"
+  "REPEAT"
+  "  %{statement}%..."
+  "UNTIL %{boolean_expression}%"
+END DEFINE
+
+DEFINE TOKEN FOR /LANGUAGE=PASCAL
+  /DESCRIPTION="Repeat a fixed number of times, counting."
+  /DESCRIPTION="The counter variable goes up (TO) or down (DOWNTO) by one each turn."
+  /EXAMPLE="FOR i := 1 TO 10 DO"
+  /EXAMPLE="  WRITELN(i)"
+  "FOR %{control_variable}% := %{initial_value}% %{direction}% %{final_value}% DO"
+  "  %{statement}%"
+END DEFINE
+
+DEFINE PLACEHOLDER control_variable /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /DESCRIPTION="The variable that counts the turns of the loop."
+  /DESCRIPTION="It must be an INTEGER (or CHAR) variable declared in VAR."
+  /EXAMPLE="i"
+END DEFINE
+
+DEFINE PLACEHOLDER initial_value /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /DESCRIPTION="The value the counter starts at."
+  /EXAMPLE="1"
+END DEFINE
+
+DEFINE PLACEHOLDER final_value /LANGUAGE=PASCAL /TYPE=TERMINAL
+  /DESCRIPTION="The value the counter stops at (this turn still runs)."
+  /EXAMPLE="10"
+END DEFINE
+
+DEFINE PLACEHOLDER direction /LANGUAGE=PASCAL /TYPE=MENU
+  /DESCRIPTION="Count up with TO, or down with DOWNTO."
+  /EXAMPLE="TO"
+  "TO"      /DESCRIPTION="count up: 1, 2, 3 ..."
+  "DOWNTO"  /DESCRIPTION="count down: 10, 9, 8 ..."
+END DEFINE
+
+DEFINE TOKEN BEGIN /LANGUAGE=PASCAL
+  /DESCRIPTION="Group statements so they count as one."
+  /DESCRIPTION="Use it inside IF, WHILE and FOR to do several things."
+  /EXAMPLE="BEGIN"
+  /EXAMPLE="  tries := tries + 1;"
+  /EXAMPLE="  WRITELN('Again')"
+  /EXAMPLE="END"
+  "BEGIN"
+  "  %{statement}%..."
+  "END"
+END DEFINE

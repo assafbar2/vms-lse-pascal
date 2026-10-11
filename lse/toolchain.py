@@ -1,0 +1,129 @@
+"""Thin adapter between the editor and the Pascal toolchain (``pascal.api``).
+
+The editor never imports the compiler, linker or VM directly; it goes
+through ``Toolchain``, which forwards to the module that implements the
+contract in ``pascal/api.py``:
+
+* ``parse_source(text, filename) -> ParseResult``
+* ``compile_file(path, *, list_file) -> CompileResult``
+* ``link(obj_paths, *, output, map_file) -> LinkResult``
+* ``run_image(exe_path, *, input_text, stdin, stdout, seed) -> RunResult``
+* ``get_message(facility, ident)`` / ``all_messages()``
+
+Optional additions are used when present: ``run_image(explain=...)`` and
+``RunResult.transcript`` (output interleaved with what the user typed).
+
+Tests pass a fake module with the same functions (see
+``lse.testing.FakePascalApi``).
+"""
+
+from __future__ import annotations
+
+import importlib
+import inspect
+from typing import Any
+
+
+class ToolchainUnavailable(Exception):
+    """``pascal.api`` could not be imported."""
+
+
+class Toolchain:
+    def __init__(self, api: Any = None, module: str = "pascal.api") -> None:
+        self._api = api
+        self._module = module
+        self._patterns: dict[str, Any] = {}
+
+    @property
+    def api(self) -> Any:
+        if self._api is None:
+            try:
+                self._api = importlib.import_module(self._module)
+            except ImportError as e:
+                raise ToolchainUnavailable(
+                    f"the Pascal toolchain ({self._module}) is not installed: {e}") from e
+        return self._api
+
+    @property
+    def available(self) -> bool:
+        try:
+            self.api
+        except ToolchainUnavailable:
+            return False
+        return True
+
+    def parse(self, text: str, filename: str = "<buffer>", *, semantic: bool = True) -> Any:
+        if not semantic and _accepts(self.api.parse_source, "semantic"):
+            return self.api.parse_source(text, filename, semantic=False)
+        return self.api.parse_source(text, filename)
+
+    def compile(self, path: str, *, list_file: bool = False) -> Any:
+        return self.api.compile_file(path, list_file=list_file)
+
+    def link(self, obj_paths: list[str], *, output: str | None = None, map_file: bool = True) -> Any:
+        return self.api.link([str(p) for p in obj_paths], output=output, map_file=map_file)
+
+    def run(self, exe_path: str, *, input_text: str | None = None, stdin: Any = None,
+            stdout: Any = None, seed: int | None = None, explain: bool | None = None) -> Any:
+        kw: dict[str, Any] = dict(input_text=input_text, stdin=stdin, stdout=stdout, seed=seed)
+        if explain is not None and _accepts(self.api.run_image, "explain"):
+            kw["explain"] = explain
+        return self.api.run_image(exe_path, **kw)
+
+    @property
+    def can_match(self) -> bool:
+        """Whether the toolchain can match statement patterns (the tutor needs it)."""
+        return self.available and hasattr(self.api, "find_statements")
+
+    def find_statements(self, ast: Any, pattern: str) -> list[Any]:
+        """Statements in ``ast`` shaped like ``pattern`` (placeholders are wildcards)."""
+        api = self.api
+        parse_statement = getattr(api, "parse_statement", None)
+        nodes = getattr(api, "astnodes", None)
+        if ast is not None and parse_statement is not None and hasattr(nodes, "matches"):
+            if pattern not in self._patterns:
+                self._patterns[pattern] = parse_statement(pattern)
+            pat = self._patterns[pattern]
+            if pat is None:
+                return []
+            return [s for s in ast.statements() if nodes.matches(pat, s)]
+        fn = getattr(api, "find_statements", None)
+        if fn is None:
+            raise ToolchainUnavailable("this Pascal toolchain cannot match statement patterns")
+        return list(fn(ast, pattern))
+
+    def parse_pattern(self, pattern: str) -> Any:
+        fn = getattr(self.api, "parse_statement", None)
+        return fn(pattern) if fn is not None else None
+
+    def message(self, facility: str, ident: str) -> Any:
+        return self.api.get_message(facility, ident)
+
+    def all_messages(self) -> list[Any]:
+        return list(self.api.all_messages())
+
+
+def _accepts(fn: Any, name: str) -> bool:
+    """Whether ``fn`` takes keyword ``name`` (optional additions to the contract)."""
+    try:
+        params = inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return False
+    return name in params or any(p.kind is p.VAR_KEYWORD for p in params.values())
+
+
+def run_text(result: Any) -> str:
+    """What the user saw during a run: the transcript (output with the typed
+    input) when the toolchain provides one, else just the output."""
+    return getattr(result, "transcript", "") or getattr(result, "output", "") or ""
+
+
+def format_diagnostic(diag: Any, explain: bool = True) -> str:
+    """VMS-style text for a diagnostic, with explanation and hint if wanted."""
+    fmt = getattr(diag, "format", None)
+    if callable(fmt):
+        return fmt(explain=explain)
+    sev = getattr(diag, "severity", "E")
+    fac = getattr(diag, "facility", "PASCAL")
+    ident = getattr(diag, "ident", "ERROR")
+    return f"%{fac}-{sev}-{ident}, {getattr(diag, 'text', diag)}"
