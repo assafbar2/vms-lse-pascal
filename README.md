@@ -4,6 +4,8 @@ A terminal editor in the style of the VAX/VMS Language-Sensitive Editor (LSE), w
 
 See [PLAN.md](PLAN.md) for the design.
 
+**Try it in a browser:** <https://assafbar2.github.io/vms-lse-pascal/> opens straight into the tutorial. Nothing to install (see [In a web browser](#in-a-web-browser)).
+
 ## Install
 
 Python 3.11 or newer is needed. From a checkout:
@@ -108,6 +110,28 @@ Lessons are plain text files (`lse/lessons/*.lesson`); the format is described a
 ### Other commands
 
 `SET THEME VT220|AMBER|GREEN`, `SET LINE_DRAWING ACS|UNICODE|ASCII` (use ASCII if boxes look like `lqqk`), `SET MESSAGES /[NO]EXPLAIN`, `TWO WINDOWS`, `ONE WINDOW`, `GOTO LINE n`, `PURGE /KEEP=n` (delete old versions), `EXIT` (save everything and quit). `HELP COMMANDS` lists them all.
+
+### In a web browser
+
+<https://assafbar2.github.io/vms-lse-pascal/> runs the same editor and toolchain, unchanged, in Python compiled to WebAssembly ([Pyodide](https://pyodide.org/)), drawn in a VT220-style terminal ([xterm.js](https://xtermjs.org/)). It works in current Chrome, Edge, Firefox and Safari on a desktop.
+
+- Your files (`GUESS.PAS;n`, the tutorial progress, `EXAMPLES/`) are kept in the browser (IndexedDB). **Start over** erases them.
+- Browsers keep some keys for themselves. Use **Esc then a digit** for an F-key (Esc 5 = F5; on a Mac the F-keys may also need fn), and **Alt-W**, **Alt-N**, **Alt-Q** for Ctrl-W, Ctrl-N and Ctrl-Q. Ctrl-P works as `LSE>`.
+- The first visit reloads the page once: a small service worker turns on the isolation that lets a running program wait for your typing (READLN). In a window where that is not possible (some private windows), programs still run, but READLN sees the end of the input.
+- The first visit downloads about 14 MB; later visits come from the browser cache.
+- URL options: `?theme=AMBER` (or `GREEN`), `?size=80x24` (or `132x24`, `fit`), `?seed=7`.
+
+To build and serve it locally:
+
+```
+cd web
+npm ci
+python3 build.py        # writes web/dist
+node serve.mjs          # http://localhost:8000/vms-lse-pascal/
+npx playwright test     # plays the tutorial in Chromium, Firefox and WebKit
+```
+
+`web/src/lse_web.py` connects the editor to the page (it plays the part of `lse/screen.py` and the curses host), `web/src/worker.js` runs it in a Web Worker, and `web/src/main.js` is the page. The "Web (GitHub Pages)" workflow builds the site, plays the tutorial in all three browsers, deploys every push to `main`, then plays it again on the live site.
 
 ## The Pascal toolchain
 
