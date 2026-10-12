@@ -3,6 +3,7 @@
 import { Terminal } from "./vendor/xterm/xterm.mjs?v=__BUILD_ID__";
 import { FitAddon } from "./vendor/xterm/addon-fit.mjs?v=__BUILD_ID__";
 import { WebglAddon } from "./vendor/xterm/addon-webgl.mjs?v=__BUILD_ID__";
+import { keyInput } from "./keys.js?v=__BUILD_ID__";
 
 const BUILD_ID = "__BUILD_ID__";
 const STORE = "vms-lse-pascal:";
@@ -13,10 +14,7 @@ const FONT_NAME = "VT323";
 const FONT_FAMILY = `"${FONT_NAME}", "DejaVu Sans Mono", Menlo, Consolas, monospace`;
 const MAX_FIT_FONT = 30;
 const RING_UNITS = 1 << 16;
-
-// Browsers keep these Ctrl keys for themselves (close tab, new window, quit),
-// so Alt plus the same letter sends the Ctrl key to LSE.
-const ALT_ALIASES = { KeyW: "\x17", KeyN: "\x0e", KeyQ: "\x11" };
+const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "AltGraph", "Meta", "CapsLock", "Fn"]);
 
 // The colours of lse.themes (xterm 256-colour palette entries 250, 214, 40).
 const THEMES = {
@@ -111,7 +109,9 @@ async function main() {
     cursorStyle: "block",
     scrollback: 0,
     drawBoldTextInBrightColors: false,
-    macOptionIsMeta: true,
+    // Option types é, ñ, ü ... as everywhere on a Mac; keys.js gives Option-W/N/Q
+    // and Option+digit their LSE meanings.
+    macOptionIsMeta: false,
     theme: {
       background: "#000000",
       foreground: THEMES.VT220.fg,
@@ -194,7 +194,11 @@ async function main() {
     worker.postMessage({ type: "wake" });
   }
 
+  const sent = [];
+
   function sendInput(text) {
+    sent.push(text);
+    if (sent.length > 200) sent.shift();
     const now = performance.now();
     const elapsed = Math.min(Math.round(now - lastInput), 1e9);
     lastInput = now;
@@ -211,13 +215,51 @@ async function main() {
   }
 
   term.onData(sendInput);
+
+  // macOS starts an accent for Option-N (and Option-E, -U, -I, -`) even when the
+  // keydown is cancelled, and the accent lands on the next key typed. After an
+  // Alt/Option key LSE uses, swallow any composition that starts and end it by
+  // taking the focus off the textarea and back.
+  const ta = term.textarea;
+  const composition = {
+    armedUntil: 0,
+    cancelling: false,
+    active() {
+      return this.cancelling || performance.now() < this.armedUntil;
+    },
+    cancel() {
+      this.cancelling = true;
+      ta.readOnly = true;
+      ta.blur();
+      ta.value = "";
+      setTimeout(() => {
+        ta.value = "";
+        ta.readOnly = false;
+        this.cancelling = false;
+        this.armedUntil = 0;
+        term.focus();
+      }, 20);
+    },
+  };
+  for (const type of ["compositionstart", "compositionupdate", "compositionend", "beforeinput", "input", "keypress"]) {
+    term.element.addEventListener(type, (ev) => {
+      if (ev.target !== ta || !composition.active()) return;
+      ev.stopPropagation();
+      if (ev.cancelable) ev.preventDefault();
+      if (ev.type === "compositionstart" && !composition.cancelling) composition.cancel();
+    }, true);
+  }
+
   term.attachCustomKeyEventHandler((ev) => {
-    const alias = ev.altKey && !ev.ctrlKey && !ev.metaKey ? ALT_ALIASES[ev.code] : undefined;
-    if (alias === undefined) return true;
-    if (ev.type === "keydown") {
-      ev.preventDefault();
-      sendInput(alias);
+    if (ev.type !== "keydown") return true;
+    const input = keyInput(ev);
+    if (input === null) {
+      if (!MODIFIER_KEYS.has(ev.key)) composition.armedUntil = 0;
+      return true;
     }
+    ev.preventDefault();
+    composition.armedUntil = ev.altKey ? performance.now() + 300 : 0;
+    sendInput(input);
     return false;
   });
 
@@ -337,7 +379,9 @@ async function main() {
   const bezel = $("bezel");
   bezel.addEventListener("mousedown", () => setTimeout(() => term.focus(), 0));
   term.textarea?.addEventListener("focus", () => bezel.classList.remove("unfocused"));
-  term.textarea?.addEventListener("blur", () => bezel.classList.add("unfocused"));
+  term.textarea?.addEventListener("blur", () => {
+    if (!composition.cancelling) bezel.classList.add("unfocused");
+  });
 
   window.addEventListener("beforeunload", (ev) => {
     if (state.modified) {
@@ -366,6 +410,7 @@ async function main() {
       return lines.join("\n");
     },
     input: sendInput,
+    sent,
   };
 }
 
