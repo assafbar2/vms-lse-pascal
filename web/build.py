@@ -25,7 +25,7 @@ ROOT = WEB.parent
 SRC = WEB / "src"
 MODULES = WEB / "node_modules"
 
-PAGES = ["index.html", "main.js", "worker.js", "sw.js", "style.css"]
+PAGES = ["index.html", "main.js", "keys.js", "worker.js", "sw.js", "style.css"]
 
 VENDOR = {
     # Pyodide is MPL-2.0; its npm package has no LICENSE file to copy

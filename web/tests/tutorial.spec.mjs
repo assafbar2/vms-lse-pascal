@@ -6,6 +6,7 @@
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { expect, test } from "@playwright/test";
+import { openLse as open, screen, waitForScreen } from "./lse-page.mjs";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
 const PYTHON = process.env.PYTHON || (process.platform === "win32" ? "python" : "python3");
@@ -48,29 +49,7 @@ function tokens(spec) {
   return out;
 }
 
-// The first visit reloads once (to start the service worker), so a read can
-// land between two pages; treat that as "not yet".
-async function read(page, fn, fallback = null) {
-  try {
-    return await page.evaluate(fn);
-  } catch {
-    return fallback;
-  }
-}
-
-const screen = (page) => read(page, () => window.lse?.text() ?? "", "");
-
-async function openLse(page, query = `?seed=${script.seed}&size=80x24`) {
-  await page.goto(query);
-  await expect.poll(() => read(page, () => !!window.lse?.state.ready, false), { timeout: 90_000 })
-    .toBe(true);
-  await page.locator(".xterm-helper-textarea").focus();
-}
-
-async function waitForScreen(page, text, timeout = 30_000) {
-  await expect.poll(() => screen(page), { timeout, message: `screen shows ${JSON.stringify(text)}` })
-    .toContain(text);
-}
+const openLse = (page, query = `?seed=${script.seed}&size=80x24`) => open(page, query);
 
 // Press F5, play the program with ``typed`` (lines; Ctrl-C as script.ctrl_c), go back.
 async function runProgram(page, typed, onScreen) {
