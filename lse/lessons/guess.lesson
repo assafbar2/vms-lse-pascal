@@ -16,7 +16,7 @@ STEP welcome
   TEXT
     Your first program is three lines: `PROGRAM Guess(INPUT, OUTPUT);`  `BEGIN`  `END.`
     Words in %{...}% are blanks to fill in. Ctrl-Q quits at any time, TUTORIAL
-    OFF just edits.
+    OFF just edits, F6 lets you skip to any step.
   END TEXT
   DO "Press Tab to open the menu, then Enter to choose PROGRAM."
     NEXT "Press Tab to open the menu, then Enter to choose PROGRAM"

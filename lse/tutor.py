@@ -776,8 +776,8 @@ class Tutor:
         hidden = "" if self.shown else " (it is hidden: Ctrl-L shows it)"
         return (f"You are on step {self.index + 1} of {self.total} of the tutorial: "
                 f"{self.step.title}. The lesson window{hidden} says what to do; F2 checks your "
-                "work, F4 gives a hint, Ctrl-L hides or shows the lesson, and TUTORIAL OFF "
-                "stops it.")
+                "work, F4 gives a hint, F6 lists the steps to skip to, Ctrl-L hides or shows "
+                "the lesson, and TUTORIAL OFF stops it.")
 
     def status_segment(self, ed: "Editor", win: "Window"):
         if not self.active or self.shown or win.buffer.system:
@@ -1270,6 +1270,17 @@ def _jump(t: Tutor, index: int) -> None:
            on_cancel=lambda: ed.info("CANCELLED", "staying on this step"))
 
 
+def _cmd_steps(ed: "Editor", args: Args) -> None:
+    t = _tutor(ed)
+    if t is None:
+        return
+    if not t.active:
+        ed.info("NOTUTORIAL", "F6 lists the tutorial's steps while it runs; Ctrl-P and "
+                "TUTORIAL starts it")
+        return
+    _cmd_tutorial_step(ed, Args())
+
+
 def _cmd_check(ed: "Editor", args: Args) -> None:
     t = _tutor(ed)
     if t is not None:
@@ -1303,6 +1314,8 @@ COMMANDS = [
             group="Tutorial"),
     Command("TUTORIAL STEP", _cmd_tutorial_step, "Jump to a tutorial step (no number: pick "
             "from a list).", [Param("number", "int")], group="Tutorial"),
+    Command("STEPS", _cmd_steps, "List the tutorial steps, to skip ahead or go back (F6).",
+            group="Tutorial"),
     Command("CHECK", _cmd_check, "Check the tutorial step now and say what is missing (F2).",
             group="Tutorial"),
     Command("HINT", _cmd_hint, "A hint for the tutorial step; press again for more, then "
@@ -1321,6 +1334,7 @@ def install(ed: "Editor", lesson_name: str = "guess", *,
                                      list(cmd.qualifiers), list(cmd.aliases), cmd.group))
     ed.keymap.bind("F2", "CHECK")
     ed.keymap.bind("F4", "HINT")
+    ed.keymap.bind("F6", "STEPS")
     ed.keymap.bind("C-l", "LESSON")
     try:
         lesson = lessonfile.load(lesson_name)
