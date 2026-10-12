@@ -21,14 +21,19 @@
         <option value="132x24">132 &times; 24</option>
       </select>
     </label>
-    <button id="keys-btn" type="button" aria-expanded="false" aria-controls="keys-panel">Browser keys</button>
+    <button id="keys-btn" type="button" aria-expanded="false" aria-controls="keys-panel"><span class="mac-only">Mac keys</span><span class="not-mac">Browser keys</span></button>
     <button id="reset-btn" type="button" title="Erase your files and tutorial progress in this browser">Start over</button>
     <a class="control" href="https://github.com/assafbar2/vms-lse-pascal" target="_blank" rel="noopener">Source</a>
   </header>
   <aside id="keys-panel" class="keys" hidden>
-    <p>The keys are the same as in the terminal version; the key bar at the bottom of the screen lists them, and <kbd>F1</kbd> shows the keypad.</p>
-    <ul>
-      <li>If the browser takes an F-key for itself, press <kbd>Esc</kbd> and then the digit: <kbd>Esc</kbd> <kbd>5</kbd> is F5, <kbd>Esc</kbd> <kbd>0</kbd> is F10. On a Mac you may need <kbd>fn</kbd> for F-keys.</li>
+    <p>The keys are the same as in the terminal version; the key bar at the bottom of the screen lists them, and <kbd>F1</kbd> shows the keypad. You can also click (or tap) a key in the key bar to press it.</p>
+    <ul class="mac-only">
+      <li>The F-keys on a Mac keyboard control the Mac (F4 opens Launchpad or Spotlight). Hold <kbd>fn</kbd> for the F-key: <kbd>fn</kbd> <kbd>F4</kbd> is Hint. Or press <kbd>esc</kbd> and then the digit (<kbd>esc</kbd> <kbd>4</kbd> is F4), or <kbd>&#x2325; option</kbd> with the digit (<kbd>&#x2325;4</kbd>). <kbd>esc</kbd> <kbd>0</kbd> or <kbd>&#x2325;0</kbd> is F10.</li>
+      <li><kbd>^</kbd> in the key bar means <kbd>&#x2303; control</kbd>, not <kbd>&#x2318; command</kbd>: <kbd>^L</kbd> is <kbd>&#x2303;L</kbd> and <kbd>^Q</kbd> is <kbd>&#x2303;Q</kbd> (<kbd>&#x2318;Q</kbd> quits the browser). <kbd>&#x2325;W</kbd>, <kbd>&#x2325;N</kbd> and <kbd>&#x2325;Q</kbd> do the same as <kbd>&#x2303;W</kbd> (other window), <kbd>&#x2303;N</kbd> (next placeholder) and <kbd>&#x2303;Q</kbd> (quit). <kbd>&#x2303;P</kbd> opens the <code>LSE&gt;</code> command line for everything else.</li>
+      <li>Your files stay in this browser, so the tutorial resumes where you left off. <em>Start over</em> erases them.</li>
+    </ul>
+    <ul class="not-mac">
+      <li>If the browser takes an F-key for itself, press <kbd>Esc</kbd> and then the digit: <kbd>Esc</kbd> <kbd>5</kbd> is F5, <kbd>Esc</kbd> <kbd>0</kbd> is F10.</li>
       <li>Browsers keep <kbd>Ctrl-W</kbd>, <kbd>Ctrl-N</kbd> and (in some) <kbd>Ctrl-Q</kbd>. Use <kbd>Alt-W</kbd> (other window), <kbd>Alt-N</kbd> (next placeholder) and <kbd>Alt-Q</kbd> (quit) instead. <kbd>Ctrl-P</kbd> opens the <code>LSE&gt;</code> command line for everything else.</li>
       <li>Your files stay in this browser, so the tutorial resumes where you left off. <em>Start over</em> erases them.</li>
     </ul>
@@ -39,6 +44,10 @@
       <div class="focus-hint" aria-hidden="true">Click the screen to type</div>
     </div>
   </main>
+  <footer id="tips" class="tips">
+    <span class="mac-only">Click a key in the bar to press it. F-keys: <kbd>fn</kbd>+F-key, or <kbd>esc</kbd> then the digit (<kbd>esc</kbd> <kbd>4</kbd> = F4). <kbd>^</kbd> is <kbd>&#x2303; control</kbd>, not <kbd>&#x2318;</kbd>. <kbd>&#x2325;W</kbd> <kbd>&#x2325;N</kbd> <kbd>&#x2325;Q</kbd> work too.</span>
+    <span class="not-mac">Click a key in the bar to press it. If the browser takes an F-key, press <kbd>Esc</kbd> then the digit (<kbd>Esc</kbd> <kbd>4</kbd> = F4). <kbd>Alt-W</kbd> <kbd>Alt-N</kbd> <kbd>Alt-Q</kbd> stand in for <kbd>Ctrl-W</kbd> <kbd>Ctrl-N</kbd> <kbd>Ctrl-Q</kbd>.</span>
+  </footer>
   <noscript><p class="noscript">LSE needs JavaScript to run in the browser.</p></noscript>
   <script type="module" src="main.js?v=__BUILD_ID__"></script>
 </body>

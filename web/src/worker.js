@@ -207,6 +207,9 @@ function handle(msg) {
         return session.next_delay();
       });
       break;
+    case "flush-keys":
+      call(() => session.timer());
+      break;
     case "flush":
       flushFiles();
       break;

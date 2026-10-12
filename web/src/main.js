@@ -3,7 +3,7 @@
 import { Terminal } from "./vendor/xterm/xterm.mjs?v=__BUILD_ID__";
 import { FitAddon } from "./vendor/xterm/addon-fit.mjs?v=__BUILD_ID__";
 import { WebglAddon } from "./vendor/xterm/addon-webgl.mjs?v=__BUILD_ID__";
-import { keyInput } from "./keys.js?v=__BUILD_ID__";
+import { barItems, barKeyInput, isMac, keyInput } from "./keys.js?v=__BUILD_ID__";
 
 const BUILD_ID = "__BUILD_ID__";
 const STORE = "vms-lse-pascal:";
@@ -14,6 +14,8 @@ const FONT_NAME = "VT323";
 const FONT_FAMILY = `"${FONT_NAME}", "DejaVu Sans Mono", Menlo, Consolas, monospace`;
 const MAX_FIT_FONT = 30;
 const RING_UNITS = 1 << 16;
+const MAC = isMac();
+const CTRL = MAC ? "\u2303" : "Ctrl-";
 const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "AltGraph", "Meta", "CapsLock", "Fn"]);
 
 // The colours of lse.themes (xterm 256-colour palette entries 250, 214, 40).
@@ -25,6 +27,7 @@ const THEMES = {
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
+document.documentElement.classList.toggle("mac", MAC);
 
 const state = {
   ready: false,
@@ -263,6 +266,87 @@ async function main() {
     return false;
   });
 
+  // ----- the key bar: click (or tap) a key to press it ------------------------
+
+  const screenEl = term.element.querySelector(".xterm-screen");
+  const keyHover = document.createElement("div");
+  keyHover.className = "key-hover";
+  keyHover.hidden = true;
+  screenEl.appendChild(keyHover);
+
+  function barRow() {
+    const buf = term.buffer.active;
+    const line = buf.getLine(buf.viewportY + term.rows - 1);
+    if (!line) return [];
+    const cells = [];
+    for (let x = 0; x < term.cols; x += 1) {
+      const cell = line.getCell(x);
+      cells.push({ ch: cell?.getChars() || " ", inverse: Boolean(cell?.isInverse()) });
+    }
+    return cells;
+  }
+
+  function barItemAt(ev) {
+    if (!state.ready || state.mode !== "edit") return null;
+    const r = screenEl.getBoundingClientRect();
+    const cw = r.width / term.cols;
+    const ch = r.height / term.rows;
+    const col = Math.floor((ev.clientX - r.left) / cw);
+    const row = Math.floor((ev.clientY - r.top) / ch);
+    if (row !== term.rows - 1 || col < 0 || col >= term.cols) return null;
+    const item = barItems(barRow()).find((it) => col >= it.start && col < it.end);
+    if (!item) return null;
+    return {
+      item,
+      at: col - item.start,
+      box: { left: item.start * cw, top: row * ch, width: (item.end - item.start) * cw, height: ch },
+    };
+  }
+
+  let pointer = null;
+  function showKeyHover(hit) {
+    screenEl.classList.toggle("xterm-cursor-pointer", Boolean(hit));
+    keyHover.hidden = !hit;
+    if (!hit) return;
+    keyHover.title = `${hit.item.key} ${hit.item.label}`;
+    Object.assign(keyHover.style, {
+      left: `${hit.box.left}px`,
+      top: `${hit.box.top}px`,
+      width: `${hit.box.width}px`,
+      height: `${hit.box.height}px`,
+    });
+  }
+
+  screenEl.addEventListener("mousemove", (ev) => {
+    pointer = { clientX: ev.clientX, clientY: ev.clientY };
+    showKeyHover(barItemAt(ev));
+  });
+  screenEl.addEventListener("mouseleave", () => {
+    pointer = null;
+    showKeyHover(null);
+  });
+  term.onRender(() => showKeyHover(pointer && barItemAt(pointer)));
+  // Ahead of xterm.js, which would start a text selection.
+  term.element.addEventListener("mousedown", (ev) => {
+    if (ev.button === 0 && barItemAt(ev)) {
+      ev.preventDefault();
+      ev.stopPropagation();
+    }
+  }, true);
+  screenEl.addEventListener("click", (ev) => {
+    const hit = barItemAt(ev);
+    if (!hit) return;
+    const { key } = hit.item;
+    const press = barKeyInput(key, hit.at < key.length ? hit.at : Infinity);
+    if (!press) return;
+    term.focus();
+    sendInput(press.input);
+    // LSE waits a second after a lone Esc in case a digit follows (Esc 5 = F5).
+    if (press.loneEsc) worker.postMessage({ type: "flush-keys" });
+    keyHover.classList.add("pressed");
+    setTimeout(() => keyHover.classList.remove("pressed"), 150);
+  });
+
   function applyTheme(name) {
     const t = THEMES[name] || THEMES.VT220;
     term.options.theme = { ...term.options.theme, foreground: t.fg, cursor: t.fg };
@@ -296,7 +380,7 @@ async function main() {
       case "event":
         if (msg.kind === "mode") {
           state.mode = msg.value;
-          if (msg.value === "run") setStatus("Your program is running. Ctrl-C stops it.");
+          if (msg.value === "run") setStatus(`Your program is running. ${CTRL}C stops it.`);
           else setStatus(...state.readyStatus);
         } else if (msg.kind === "input") {
           state.reads += 1;
@@ -411,6 +495,7 @@ async function main() {
     },
     input: sendInput,
     sent,
+    barItems: () => barItems(barRow()),
   };
 }
 
