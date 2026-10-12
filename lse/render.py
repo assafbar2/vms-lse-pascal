@@ -164,7 +164,7 @@ def _draw_text_rows(editor: "Editor", scr: VirtualScreen, win: Window, top: int,
                     e = min(p.end, win.left + cols) - win.left
                     if e > s:
                         scr.set_role(srow, left_col + s, left_col + e, "placeholder")
-        elif r == len(buf.lines):
+        elif r == len(buf.lines) and "lesson" not in win.tags:
             scr.put(srow, left_col, "[End of file]", "eof")
     return used
 

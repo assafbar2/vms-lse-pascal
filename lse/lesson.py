@@ -41,6 +41,9 @@ A lesson is a header and a list of steps::
 * A step with no checks at all is the end of the lesson.
 * ``!`` starts a comment line. Strings use double quotes (``""`` for a
   quote); ``\\n`` in a qualifier value is a new line.
+* In TEXT, DO, NEXT, SEE and HINT, text in backquotes is code: it is shown
+  without the backquotes and never split across two lines of the lesson
+  window, e.g. ```WRITELN('Hello')```.
 
 Check types (``CHECK TYPE args /QUALIFIER=value``, every one takes
 ``/FAIL="what to say when it is not done yet"``):
@@ -69,9 +72,26 @@ Check types (``CHECK TYPE args /QUALIFIER=value``, every one takes
 from __future__ import annotations
 
 import os
+import re
+import textwrap
 from dataclasses import dataclass, field
 
 LESSON_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "lessons")
+CODE_SPAN = re.compile(r"`([^`]*)`")
+_KEEP = "\x00"   # stands in for a space inside code while wrapping
+
+
+def plain(text: str) -> str:
+    """Lesson text as shown: code spans without their backquotes."""
+    return CODE_SPAN.sub(lambda m: m.group(1), text)
+
+
+def wrap(text: str, width: int, initial_indent: str = "", subsequent_indent: str = "") -> list[str]:
+    """Wrap lesson text to ``width``, never breaking inside a code span."""
+    kept = CODE_SPAN.sub(lambda m: m.group(1).replace(" ", _KEEP), text)
+    lines = textwrap.wrap(kept, width, initial_indent=initial_indent,
+                          subsequent_indent=subsequent_indent, break_on_hyphens=False)
+    return [line.replace(_KEEP, " ") for line in lines]
 
 #: check type -> (minimum args, maximum args or None, allowed qualifiers)
 CHECK_TYPES: dict[str, tuple[int, int | None, frozenset[str]]] = {
@@ -140,7 +160,7 @@ class DoItem:
 
     @property
     def next_text(self) -> str:
-        return self.next or self.text
+        return plain(self.next or self.text)
 
 
 @dataclass

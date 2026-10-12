@@ -26,7 +26,7 @@ def test_first_launch_goes_straight_into_the_tutorial(tmp_path):
     assert h.tutor.active and h.tutor.index == 0
     assert h.buffer.name == "GUESS.PAS" and h.lines == ["%{compilation_unit}%"]
     assert h.lesson
-    lesson = " ".join(" ".join(h.lesson).split())
+    lesson = " ".join(" ".join(h.tutor.lesson_buffer.lines).split())
     assert "Ctrl-Q quits at any time" in lesson and "TUTORIAL OFF just edits" in lesson
     assert "^Q Quit" in h.key_bar
     assert h.overlay is None
