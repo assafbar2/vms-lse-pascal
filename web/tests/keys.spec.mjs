@@ -50,15 +50,15 @@ test("clicking a key in the key bar presses it", async ({ page }) => {
   // the click did not select text
   expect(await page.evaluate(() => window.lse.term.hasSelection())).toBe(false);
 
-  // a menu's "Esc Cancel" closes it at once, without LSE waiting for a digit
-  await page.keyboard.press("Tab");
+  await clickBar(page, "F6");
+  await waitForScreen(page, "Tutorial steps");
+  // "Esc Cancel" closes the list at once, without LSE waiting for a digit
   await expect.poll(() => barItem(page, "Esc")).not.toBeNull();
-  const opened = await screen(page);
   const started = Date.now();
   await clickBar(page, "Esc");
-  await expect.poll(() => barItem(page, "F4")).not.toBeNull();
+  await expect.poll(() => barItem(page, "F6")).not.toBeNull();
   expect(Date.now() - started).toBeLessThan(900);
-  expect(await screen(page)).not.toEqual(opened);
+  expect(await screen(page)).not.toContain("Tutorial steps");
 
   await clickBar(page, "^L");
   await waitForScreen(page, "lesson hidden");
@@ -112,10 +112,16 @@ test.describe("on a Mac", () => {
     expect(await shown(page, "#tips")).not.toContain("Alt");
     await page.locator("#keys-btn").click();
     expect(await shown(page, "#keys-panel")).toContain("control, not");
+    expect(await shown(page, "#keys-panel")).toContain("fn F6 lists the tutorial's steps");
     expect(await shown(page, "#keys-panel")).not.toContain("Alt-W");
+    expect(await shown(page, "#tips")).toContain("esc 6 = F6 Steps");
     await page.locator("#keys-btn").click();
 
-    // Option-4 is F4
+    // Option-6 is F6, Option-4 is F4
+    await macKey(page, { key: "§", code: "Digit6", altKey: true }, 54);
+    await waitForScreen(page, "Tutorial steps");
+    await page.keyboard.press("Escape");
+    await expect.poll(() => screen(page)).not.toContain("Tutorial steps");
     await macKey(page, { key: "¢", code: "Digit4", altKey: true }, 52);
     await waitForScreen(page, "Hint 1 of 3");
     // Esc under an input method (keyCode 229), then 4: F4 again

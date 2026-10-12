@@ -91,6 +91,14 @@ test("the key bar row", () => {
     { key: "Up/Down", label: "Choose", start: 18, end: 32 },
     { key: "^Q", label: "Quit", start: 34, end: 41 },
   ]);
+  // at 80 columns LSE puts single spaces between the entries
+  const tight = "F1 Help F4 Hint F5 Run F6 Steps F7 Compile F8 Errors ^L Lesson ^Q Quit ";
+  expect(barItems(row(tight, ["F1", "F4", "F5", "F6", "F7", "F8", "^L", "^Q"])).slice(2, 5)).toEqual([
+    { key: "F5", label: "Run", start: 16, end: 22 },
+    { key: "F6", label: "Steps", start: 23, end: 31 },
+    { key: "F7", label: "Compile", start: 32, end: 42 },
+  ]);
+  expect(barKeyInput("F6").input).toBe("\x1b[17~");
   expect(barItems(row("F1 Help  ??? What", ["F1", "???"])).map((i) => i.key)).toEqual(["F1"]);
   // not the key bar (the LSE> command line, a program's output)
   expect(barItems(row("LSE> F4 Hint", ["F4"]))).toEqual([]);
