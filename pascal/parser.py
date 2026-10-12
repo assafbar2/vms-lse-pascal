@@ -31,6 +31,23 @@ MULOPS = {"*", "/", "DIV", "MOD", "AND"}
 
 MAX_ERRORS = 40
 
+#: procedures whose arguments people try to write without brackets (WRITELN 'hi')
+IO_PROCS = {"WRITE", "WRITELN", "READ", "READLN"}
+#: tokens that can start an argument but never a new statement or a statement's end
+ARGUMENT_STARTS = {"STRING", "INT", "REAL", "IDENT", "-", "+", "NOT"}
+
+
+def _source_text(tokens: list[Token]) -> str:
+    """The source of a run of tokens on one line, spaced as written."""
+    out = ""
+    prev = None
+    for tok in tokens:
+        if prev is not None:
+            out += " " * max(0, tok.column - prev.end_column) if tok.line == prev.end_line else " "
+        out += tok.text
+        prev = tok
+    return out
+
 
 class ParseError(Exception):
     """Raised to abandon the current statement or declaration after reporting an error."""
@@ -577,10 +594,45 @@ class Parser:
             value = self.expression()
             return self.finish(A.Assign(target=target, value=value), t)
         if isinstance(target, A.Name):
-            args = self.call_args() if self.at("(") else []
+            if self.at("("):
+                args = self.call_args()
+            elif target.name.upper() in IO_PROCS and self._bare_argument_follows(t):
+                args = self.bare_io_args(target.name)
+            else:
+                args = []
             return self.finish(A.ProcCall(name=target.name, args=args), t)
         self.report_expected(":=")
         raise ParseError
+
+    def _bare_argument_follows(self, name_tok: Token) -> bool:
+        """``WRITELN 'hi'``: something that can only be an argument follows on the same line."""
+        t = self.tok
+        if t.line != name_tok.line or t.kind not in ARGUMENT_STARTS:
+            return False
+        return not (t.kind == "IDENT" and self.peek().kind in (":=", "="))
+
+    def bare_io_args(self, name: str) -> list[A.Expr]:
+        """Parse the items of ``WRITELN 'hi', x`` as if the brackets were there, and say so."""
+        first = self.tok
+        start_index = self.i
+        args: list[A.Expr] = []
+        while True:
+            start = self.tok
+            a = self.expression()
+            if self.at(":"):
+                self.advance()
+                width = self.expression()
+                precision = self.expression() if self.accept(":") else None
+                a = self.finish(A.WriteArg(value=a, width=width, precision=precision), start)
+            args.append(a)
+            if not self.accept(","):
+                break
+        items = _source_text(self.toks[start_index:self.i])
+        self.accept(")")
+        what = "the variables it reads into" if name.upper().startswith("READ") else "what it prints"
+        self.error("NOPARENS", first, force=True, name=name.upper(), what=what,
+                   fixed=f"{name}({items})")
+        return args
 
     def case_statement(self) -> A.Case:
         t = self.advance()

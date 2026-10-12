@@ -63,6 +63,7 @@ F1 Help  F2 Check  F4 Hint  F5 Run  F7 Compile  F8 Errors  ^L Lesson  ^Q Quit
 | Ctrl-K, Ctrl-Delete | erase a placeholder (an optional one takes its `;` or `,` with it) |
 | F1 | explain the placeholder or word at the cursor; elsewhere, WHAT NOW and the keypad |
 | F2 / F4 | tutorial: check the step / a hint (press again for more, then "show me") |
+| F6 | tutorial: list the steps, to skip ahead or go back |
 | F5 | compile, link and run |
 | F7 | compile |
 | F8, Shift-F8 | next / previous compiler message, in the source |
@@ -99,6 +100,7 @@ Placeholders are the blanks in a template: `%{name}%` must be filled in, `%[name
 
 The tutorial builds `GUESS.PAS` in ten steps: an empty program, `WRITELN`, a mistake made on purpose (and F8), variables, `RANDOM` and the link map, a `REPEAT` loop with `READLN`, `IF ... ELSE IF ... ELSE`, counting tries, playing, and some challenges. Each step says exactly what to press (DO THIS) and what you will see, and ticks the actions off as you do them. It moves on by itself when the step is done.
 
+- **F6** lists the steps: pick one to skip ahead (LSE offers to fill in the program from the steps before it) or to go back.
 - **F2** checks the step and says what is missing. **F4** gives a hint; press it again for the exact keys, and a third time to see the step's finished program and put it in (Ctrl-Z takes it back out).
 - If something an earlier step built goes missing, the NEXT line says so. Ctrl-Z undoes the change, or F4 puts it back.
 - **Ctrl-L** hides or shows the lesson. While it is hidden, the status line says `Lesson 7/10 ^L`.

@@ -420,11 +420,12 @@ def key_items(ed: "Editor") -> list[tuple[str, str]]:
         if view == "lesson":
             items.append(("^L", "Hide lesson"))
         if tutoring:
-            items += [("F2", "Check"), ("F4", "Hint")]
+            items += [("F2", "Check"), ("F4", "Hint"), ("F6", "Steps")]
         return items + [("F1", "Help"), ("^Q", "Quit")]
     if tutoring:
-        return [("F1", "Help"), ("F2", "Check"), ("F4", "Hint"), ("F5", "Run"), ("F7", "Compile"),
-                ("F8", "Errors"), ("^L", "Lesson"), ("F10", "Cmd"), ("^Q", "Quit")]
+        return [("F1", "Help"), ("F2", "Check"), ("F4", "Hint"), ("F5", "Run"), ("F6", "Steps"),
+                ("F7", "Compile"), ("F8", "Errors"), ("^L", "Lesson"), ("F10", "Cmd"),
+                ("^Q", "Quit")]
     return [("F1", "Help"), ("^S", "Save"), ("^O", "Open"), ("F5", "Run"), ("F7", "Compile"),
             ("F8", "Errors"), ("F10", "Cmd"), ("^Q", "Quit")]
 
@@ -447,19 +448,24 @@ def key_bar(ed: "Editor", width: int) -> list:
     last = items[-1]
     body = items[:-1]
 
-    def build(chosen: list[tuple[str, str]]) -> list[tuple[str, str]]:
+    def build(chosen: list[tuple[str, str]], gap: str) -> list[tuple[str, str]]:
         segs: list[tuple[str, str]] = []
         for key, label in chosen:
-            segs += [(key, "keybar_key"), (f" {label}  ", "keybar")]
+            segs += [(key, "keybar_key"), (f" {label}{gap}", "keybar")]
+        if segs:
+            segs[-1] = (segs[-1][0].rstrip(), segs[-1][1])
         return segs
 
+    def fits(segs: list[tuple[str, str]]) -> bool:
+        return sum(len(t) for t, _ in segs) <= width
+
     while True:
-        segs = build(body + [last])
-        if sum(len(t) for t, _ in segs) <= width + 2 or not body:
+        segs = build(body + [last], "  ")
+        if not fits(segs):
+            segs = build(body + [last], " ")  # the key caps still keep the entries apart
+        if fits(segs) or not body:
             break
         body = body[:-1]
-    if segs:
-        segs[-1] = (segs[-1][0].rstrip(), segs[-1][1])
     return [[("", "keybar")] + segs]
 
 

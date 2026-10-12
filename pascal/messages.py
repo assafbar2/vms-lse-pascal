@@ -272,6 +272,13 @@ _CATALOG: list[MessageInfo] = [
        "so it cannot be used as a statement on its own.",
        "If you meant to change a variable, write an assignment like name := value.",
        '"{name}" is a {what}; if you meant to change it, write "{name} := value".'),
+    _m("PASCAL", "NOPARENS", "E", "{name} needs brackets around {what}",
+       "WRITE, WRITELN, READ and READLN take what they print, or the variables they read into, "
+       "in round brackets right after their name, like WRITELN('Hello') or READLN(guess). "
+       "Without the brackets the compiler cannot tell that the rest belongs to them.",
+       "Put round brackets around the items, for example WRITELN('Hello') instead of "
+       "WRITELN 'Hello'.",
+       "Write {fixed} instead."),
     _m("PASCAL", "FUNCSTMT", "E", 'the result of function "{name}" is not used',
        "A function calculates a value, so it must be used inside an expression; "
        "it cannot be a statement on its own like a procedure.",

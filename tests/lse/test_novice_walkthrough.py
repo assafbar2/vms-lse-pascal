@@ -83,6 +83,21 @@ def test_newcomer_with_wrong_turns_finishes_the_game(newcomer):
     n.do("<C-k><Tab><C-k><F5>")
     assert n.step == "say"
 
+    # Types WRITELN by hand and leaves out the brackets (a real user got stuck here).
+    n.do("<Up><End><Enter>WRITELN 'hi'")
+    assert h.text == "PROGRAM Guess(INPUT, OUTPUT);\nBEGIN\n  WRITELN 'hi'\nEND."
+    assert h.next_line == "Line 3: type ( after WRITELN and ) at the end, so it reads WRITELN('hi')"
+    assert "WRITELN needs brackets around what it prints" in \
+        " ".join(" ".join(h.tutor.lesson_buffer.lines).split())
+    n.do("<F5>")
+    assert "%PASCAL-E-NOPARENS, WRITELN needs brackets around what it prints" in h.message
+    assert "Hint: Write WRITELN('hi') instead." in h.message
+    n.do("<Home>" + "<Right>" * 7 + "(<End>)")
+    assert h.lines[2] == "  WRITELN( 'hi')"
+    assert h.next_line == "Press F5 to compile, link and run it"
+    h.command("DELETE LINE")  # and now the lesson's way instead
+    n.check("deleting the line")
+
     # Forgets the closing quote; the compiler finds it and F8 goes there.
     n.do("<Up><End><Enter>WRITELN<Tab>'I am thinking of a number from 1 to 100.")
     n.do("<F5>")

@@ -174,6 +174,8 @@ class Tutor:
         #: after a jump or resume, wait for something new before passing the step
         self._hold: tuple | None = None
         self._needed: dict[int, int] = {}
+        #: a WRITELN 'text' without brackets in the program, if there is one
+        self.slip: Slip | None = None
 
     # ----- where things are ---------------------------------------------------
 
@@ -641,6 +643,8 @@ class Tutor:
             status = self.evaluate(ctx)
             self._done_count = sum(status.done)
         self.regression = self._find_regression(ctx)
+        self.slip = None if self.step.final or self._mistakes_wanted() else \
+            bracket_slip(ctx.parsed(self), ctx.buf)
         self.status = status
         self.sync_window()
         self.refresh_lesson()
@@ -702,6 +706,8 @@ class Tutor:
                 and not ed.buffer.system and not ed.buffer.read_only:
             return (f"The lesson is about {self.lesson.file}: Ctrl-O, type {self.lesson.file} "
                     "and Enter (TUTORIAL OFF stops the lesson)")
+        if self.slip is not None:
+            return self.slip.next_text
         if step.final:
             if buf is not None and buf.modified:
                 return "You finished! Ctrl-S saves your game; then try a challenge or Ctrl-Q"
@@ -770,8 +776,8 @@ class Tutor:
         hidden = "" if self.shown else " (it is hidden: Ctrl-L shows it)"
         return (f"You are on step {self.index + 1} of {self.total} of the tutorial: "
                 f"{self.step.title}. The lesson window{hidden} says what to do; F2 checks your "
-                "work, F4 gives a hint, Ctrl-L hides or shows the lesson, and TUTORIAL OFF "
-                "stops it.")
+                "work, F4 gives a hint, F6 lists the steps to skip to, Ctrl-L hides or shows "
+                "the lesson, and TUTORIAL OFF stops it.")
 
     def status_segment(self, ed: "Editor", win: "Window"):
         if not self.active or self.shown or win.buffer.system:
@@ -867,23 +873,25 @@ class Tutor:
     def lesson_lines(self) -> tuple[list[str], int | None]:
         """The lesson window text, and the row of the current DO item."""
         rows = self._height() - 2
-        return render_step(self.step, self.status, self.hint_level, self._text_width(), rows)
+        notice = self.slip.lesson_text if self.slip is not None else None
+        return render_step(self.step, self.status, self.hint_level, self._text_width(), rows,
+                           notice=notice)
 
     def full_step_lines(self, width: int) -> list[str]:
         """The whole step, nothing shortened (WHAT NOW shows it)."""
         step = self.step
         out = [f"Lesson {self.index + 1} of {self.total}: {step.title}"]
         for para in step.text:
-            out += textwrap.wrap(para, width) or [""]
+            out += lessonfile.wrap(para, width) or [""]
         for i, item in enumerate(step.items):
             done = i < len(self.status.done) and self.status.done[i]
             mark = "*" if step.final else ("[x]" if done else "[ ]")
-            out += textwrap.wrap(f"{i + 1}. {item.text}", width, initial_indent=f"  {mark} ",
+            out += lessonfile.wrap(f"{i + 1}. {item.text}", width, initial_indent=f"  {mark} ",
                                  subsequent_indent=" " * (len(mark) + 6))
         if step.see:
-            out += textwrap.wrap(("You will see: " if not step.final else "") + step.see, width)
+            out += lessonfile.wrap(("You will see: " if not step.final else "") + step.see, width)
         for level in range(1, min(self.hint_level, len(step.hints)) + 1):
-            out += textwrap.wrap(f"Hint {level}: {step.hints[level - 1]}", width,
+            out += lessonfile.wrap(f"Hint {level}: {step.hints[level - 1]}", width,
                                  subsequent_indent="   ")
         return out
 
@@ -938,7 +946,7 @@ class Tutor:
             if self.shown:
                 ed.show(f"{n} is at the top of the lesson; {more}", "I")
             else:
-                ed.show(f"{n}: {step.hints[self.hint_level - 1]}\n({more})", "I")
+                ed.show(f"{n}: {lessonfile.plain(step.hints[self.hint_level - 1])}\n({more})", "I")
             return
         self.hint_level = len(step.hints) + 1
         self.show_me()
@@ -1043,10 +1051,51 @@ class Tutor:
         self.update()
 
 
+_NOPARENS_FIX = re.compile(r"^Write (?P<fixed>.+) instead\.$")
+
+
+@dataclass
+class Slip:
+    """``WRITELN 'text'`` typed without brackets: where it is and how the line should read."""
+
+    line: int
+    name: str
+    fixed: str
+    where: str      # where the ")" goes: "at the end" or "before the ;"
+    problem: str    # the compiler's words, e.g. "WRITELN needs brackets around what it prints"
+
+    @property
+    def next_text(self) -> str:
+        return f"Line {self.line}: type ( after {self.name} and ) {self.where}, so it reads " \
+               f"{self.fixed}"
+
+    @property
+    def lesson_text(self) -> str:
+        return (f"Line {self.line} should read  `{self.fixed}`  -- {self.problem}: type ( right "
+                f"after {self.name} and ) {self.where}.")
+
+
+def bracket_slip(parsed: Any, buf: "Buffer") -> Slip | None:
+    """The first WRITE/WRITELN/READ/READLN in the program written without brackets."""
+    for d in getattr(parsed, "diagnostics", None) or []:
+        if getattr(d, "ident", "") != "NOPARENS":
+            continue
+        line = getattr(d, "line", None) or 0
+        text = getattr(d, "text", "") or "WRITELN needs brackets"
+        name = text.split()[0]
+        m = _NOPARENS_FIX.match(getattr(d, "hint", "") or "")
+        fixed = m.group("fixed") if m else f"{name}(...)"
+        source = buf.lines[line - 1] if 0 < line <= len(buf.lines) else ""
+        if source.rstrip().endswith(";"):
+            return Slip(line, name, fixed + ";", "before the ;", text)
+        return Slip(line, name, fixed, "at the end", text)
+    return None
+
+
 def _shorten(text: str, width: int) -> str:
-    if len(text) <= width:
-        return text
-    return textwrap.shorten(text, width=width, placeholder=" ...")
+    if len(lessonfile.plain(text)) <= width:
+        return lessonfile.plain(text)
+    return textwrap.shorten(lessonfile.plain(text), width=width, placeholder=" ...")
 
 
 def _cut(lines: list[str], n: int, width: int) -> list[str]:
@@ -1059,13 +1108,14 @@ def _cut(lines: list[str], n: int, width: int) -> list[str]:
 
 
 def render_step(step: Step, status: StepStatus, hint_level: int, width: int,
-                rows: int | None = None) -> tuple[list[str], int | None]:
+                rows: int | None = None, notice: str | None = None
+                ) -> tuple[list[str], int | None]:
     """The lesson window text for a step, and the row of the current DO item.
 
-    The current DO item is shown in full and the others on one line each; a
-    hint takes the place of the explanation at the top. If ``rows`` is still
-    too few (a small terminal), YOU WILL SEE and then the explanation are cut
-    short before anything has to scroll.
+    The current DO item is shown in full and the others on one line each. A
+    ``notice`` (a mistake to fix) or else a hint takes the place of the
+    explanation at the top. If ``rows`` is still too few (a small terminal),
+    YOU WILL SEE and then the top are cut short before anything has to scroll.
     """
     label = "TRY THIS: " if step.final else "DO THIS:  "
     pad = " " * len(label)
@@ -1073,13 +1123,15 @@ def render_step(step: Step, status: StepStatus, hint_level: int, width: int,
     top: list[str] = []
     hints = step.hints
     level = min(hint_level, len(hints))
-    if level > 0 and not step.final:
+    if notice:
+        top = lessonfile.wrap(notice, width, subsequent_indent="   ")
+    elif level > 0 and not step.final:
         more = "(F4 again: show me)" if level == len(hints) else "(F4: more help)"
-        top = textwrap.wrap(f"Hint {level} of {len(hints) + 1}: {hints[level - 1]}  {more}",
+        top = lessonfile.wrap(f"Hint {level} of {len(hints) + 1}: {hints[level - 1]}  {more}",
                             width, subsequent_indent="   ")
     else:
         for para in step.text:
-            top += textwrap.wrap(para, width) or [""]
+            top += lessonfile.wrap(para, width) or [""]
     items: list[list[str]] = []
     current_item = None if step.final else status.current
     for i, item in enumerate(step.items):
@@ -1092,7 +1144,7 @@ def render_step(step: Step, status: StepStatus, hint_level: int, width: int,
         else:
             mark = "[ ]"
         if step.final or i == current_item:
-            body = textwrap.wrap(item.text, body_width) or [""]
+            body = lessonfile.wrap(item.text, body_width) or [""]
         else:
             body = [_shorten(item.text, body_width)]
         lines = [f"{label if i == 0 else pad}{mark} {i + 1}. {body[0]}"]
@@ -1101,7 +1153,7 @@ def render_step(step: Step, status: StepStatus, hint_level: int, width: int,
     see: list[str] = []
     if step.see:
         prefix = "" if step.final else "YOU WILL SEE: "
-        see = textwrap.wrap(prefix + step.see, width, subsequent_indent=" " * len(prefix)) or [""]
+        see = lessonfile.wrap(prefix + step.see, width, subsequent_indent=" " * len(prefix)) or [""]
     if rows is not None:
         over = len(top) + sum(map(len, items)) + len(see) - rows
         if over > 0 and len(see) > 1:
@@ -1218,6 +1270,17 @@ def _jump(t: Tutor, index: int) -> None:
            on_cancel=lambda: ed.info("CANCELLED", "staying on this step"))
 
 
+def _cmd_steps(ed: "Editor", args: Args) -> None:
+    t = _tutor(ed)
+    if t is None:
+        return
+    if not t.active:
+        ed.info("NOTUTORIAL", "F6 lists the tutorial's steps while it runs; Ctrl-P and "
+                "TUTORIAL starts it")
+        return
+    _cmd_tutorial_step(ed, Args())
+
+
 def _cmd_check(ed: "Editor", args: Args) -> None:
     t = _tutor(ed)
     if t is not None:
@@ -1251,6 +1314,8 @@ COMMANDS = [
             group="Tutorial"),
     Command("TUTORIAL STEP", _cmd_tutorial_step, "Jump to a tutorial step (no number: pick "
             "from a list).", [Param("number", "int")], group="Tutorial"),
+    Command("STEPS", _cmd_steps, "List the tutorial steps, to skip ahead or go back (F6).",
+            group="Tutorial"),
     Command("CHECK", _cmd_check, "Check the tutorial step now and say what is missing (F2).",
             group="Tutorial"),
     Command("HINT", _cmd_hint, "A hint for the tutorial step; press again for more, then "
@@ -1269,6 +1334,7 @@ def install(ed: "Editor", lesson_name: str = "guess", *,
                                      list(cmd.qualifiers), list(cmd.aliases), cmd.group))
     ed.keymap.bind("F2", "CHECK")
     ed.keymap.bind("F4", "HINT")
+    ed.keymap.bind("F6", "STEPS")
     ed.keymap.bind("C-l", "LESSON")
     try:
         lesson = lessonfile.load(lesson_name)

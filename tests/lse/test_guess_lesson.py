@@ -7,9 +7,10 @@ from lse_helpers import CTRL_C, GUESS_SEED, TUTORIAL_KEYS
 
 from lse import lesson as lessonfile
 from lse import placeholders as ph
+from lse.lesson import plain
 from lse.testing import EditorHarness
 from lse.toolchain import Toolchain
-from lse.tutor import PreviewOverlay, _Context
+from lse.tutor import PreviewOverlay, _Context, _every_status, render_step
 
 api = pytest.importorskip("pascal.api")
 
@@ -39,6 +40,46 @@ def test_lesson_has_ten_steps_each_with_do_see_hints_and_solution():
         for item in step.items:
             assert len(item.next_text) <= 74, item.next_text
     assert LESSON.steps[-1].final and LESSON.steps[-1].items
+
+
+#: the exact lines each step adds to GUESS.PAS (the lesson must show them)
+TARGET_LINES = {
+    "welcome": ["PROGRAM Guess(INPUT, OUTPUT);", "BEGIN", "END."],
+    "say": ["WRITELN('I am thinking of a number from 1 to 100.')"],
+    "mistake": ["PROGRAM Guess(INPUT, OUTPUT);"],
+    "variables": ["VAR", "secret, guess, tries : INTEGER;"],
+    "secret": ["RANDOMIZE;", "secret := RANDOM(100) + 1;"],
+    "ask": ["REPEAT", "WRITE('Your guess? ');", "READLN(guess)", "UNTIL guess = secret"],
+    "decide": ["IF guess < secret THEN", "WRITELN('Too low!')", "ELSE IF guess > secret THEN",
+               "WRITELN('Too high!')", "ELSE", "WRITELN('Correct!')"],
+    "count": ["tries := 0;", "tries := tries + 1;",
+              "WRITELN('Correct! You got it in ', tries:1, ' tries.')"],
+    "play": [],
+    "done": [],
+}
+
+
+def _norm(text):
+    return " ".join(text.split())
+
+
+def test_every_step_shows_the_exact_lines_it_adds():
+    assert set(TARGET_LINES) == {s.id for s in LESSON.steps}
+    for step in LESSON.steps:
+        solution = [line.strip() for line in step.solution or []]
+        seen_somewhere = ""
+        for status in _every_status(step):
+            lines, _ = render_step(step, status, 0, 76)
+            seen_somewhere += " " + _norm(" ".join(lines))
+        for target in TARGET_LINES[step.id]:
+            assert any(line.startswith(target) for line in solution), (step.id, target)
+            assert target in seen_somewhere, (step.id, target)
+
+
+def test_the_lesson_says_tab_fills_in_the_brackets_but_typing_works_too():
+    say = _norm(" ".join(plain(p) for p in LESSON.steps[1].text))
+    assert "Tab puts in the brackets for you" in say
+    assert "typing the whole line by hand works too" in say
 
 
 def test_every_statement_pattern_parses():

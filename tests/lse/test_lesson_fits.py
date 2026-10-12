@@ -4,6 +4,7 @@ import pytest
 from lse_helpers import GUESS_SEED, TUTORIAL_KEYS
 
 from lse import lesson as lessonfile
+from lse.lesson import plain
 from lse.testing import EditorHarness
 from lse.tutor import CODE_ROWS, StepStatus, _every_status, render_step
 
@@ -35,7 +36,7 @@ def test_nothing_needed_is_cut_short_at_80_columns():
         text = " ".join(" ".join(lines).split())
 
         def norm(t):
-            return " ".join(t.split())
+            return " ".join(plain(t).split())
 
         assert lines == render_step(step, status, hint, WIDTH)[0], step.id
         if hint == 0:
@@ -55,7 +56,7 @@ def test_a_hint_takes_the_place_of_the_explanation():
     status = StepStatus([False, False, False], 0)
     plain, _ = render_step(step, status, 0, WIDTH)
     hinted, _ = render_step(step, status, 1, WIDTH)
-    assert plain[0].startswith("The statements of a program go between BEGIN and END.")
+    assert plain[0].startswith("Statements go between BEGIN and END.")
     assert hinted[0].startswith("Hint 1 of 3: WRITELN(...)")
     assert len(hinted) <= len(plain) + 1
     assert plain[-1] == hinted[-1]  # YOU WILL SEE stays
