@@ -56,10 +56,23 @@ createServer((req, res) => {
     res.end("not found");
     return;
   }
+  // Pages answers a reload's revalidation with 304 Not Modified.
+  const etag = `"${Math.floor(stat.mtimeMs).toString(16)}-${stat.size.toString(16)}"`;
+  const lastModified = new Date(Math.floor(stat.mtimeMs / 1000) * 1000).toUTCString();
+  const cache = { ETag: etag, "Last-Modified": lastModified, "Cache-Control": "max-age=600" };
+  const since = Date.parse(req.headers["if-modified-since"] || "");
+  const fresh = req.headers["if-none-match"]
+    ? req.headers["if-none-match"].split(",").some((tag) => tag.trim() === etag)
+    : since >= Date.parse(lastModified);
+  if (fresh) {
+    res.writeHead(304, cache);
+    res.end();
+    return;
+  }
   res.writeHead(200, {
     "Content-Type": TYPES[extname(file)] || "application/octet-stream",
     "Content-Length": stat.size,
-    "Cache-Control": "max-age=600",
+    ...cache,
   });
   createReadStream(file).pipe(res);
 }).listen(port, () => {

@@ -136,8 +136,30 @@ async function mountHome() {
   py.FS.mkdirTree(HOME);
   try {
     py.FS.mount(py.FS.filesystems.IDBFS, {}, HOME);
-    await syncfs(true);
+    // Opening waits while another tab is deleting the files (Start over).
+    const slow = setTimeout(() => {
+      post("status", { text: "Still opening your files. Is LSE starting over in another tab?" });
+    }, 8000);
+    try {
+      await syncfs(true);
+    } finally {
+      clearTimeout(slow);
+    }
     persistent = true;
+    // Start over in another tab deletes the files, which waits until every
+    // tab has closed them. Close them, and stop saving: saving would put the
+    // old files back.
+    const idbfs = py.FS.filesystems.IDBFS;
+    const db = idbfs.dbs?.[HOME];
+    if (db) {
+      db.onversionchange = () => {
+        persistent = false;
+        clearTimeout(syncTimer);
+        db.close();
+        delete idbfs.dbs[HOME];
+        post("event", { kind: "files-deleted" });
+      };
+    }
   } catch (err) {
     console.warn("IndexedDB is not available; files last until the page is closed", err);
     post("event", { kind: "storage", value: "memory" });
