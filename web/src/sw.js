@@ -6,6 +6,11 @@
 // so this service worker adds them to every same-origin response. The page
 // registers it and reloads once (see main.js).
 
+// A reload revalidates cached files, and the answer can be 304 Not Modified.
+// A response with one of these statuses must have no body: Safari rejects it
+// otherwise, and the file fails to load.
+const NO_BODY = new Set([204, 205, 304]);
+
 self.addEventListener("install", () => self.skipWaiting());
 
 self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
@@ -21,7 +26,7 @@ self.addEventListener("fetch", (event) => {
       headers.set("Cross-Origin-Opener-Policy", "same-origin");
       headers.set("Cross-Origin-Embedder-Policy", "require-corp");
       headers.set("Cross-Origin-Resource-Policy", "same-origin");
-      return new Response(response.body, {
+      return new Response(NO_BODY.has(response.status) ? null : response.body, {
         status: response.status,
         statusText: response.statusText,
         headers,
