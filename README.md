@@ -1,3 +1,16 @@
+<!-- VIDEOS:START -->
+<p align="center">
+  <a href="https://youtu.be/az2bLRXRGDo"><img src="docs/images/lse-hero.jpg" width="100%" alt="Intro video on YouTube (0:40): LSE on a green-phosphor CRT, the Language-Sensitive Editor banner over a new GUESS.PAS with the EDIT > COMPILE > LINK > RUN status line"></a>
+</p>
+
+<p align="center">
+  <b>Watch on YouTube:</b>
+  <a href="https://youtu.be/az2bLRXRGDo">Intro</a> (0:40)
+  &nbsp;·&nbsp; <a href="https://youtu.be/egWrLfefIX8">Live web demo</a> (1:28)
+  &nbsp;·&nbsp; <a href="https://youtu.be/dHM4r9jti8w">Terminal tutorial</a> (4:18)
+</p>
+<!-- VIDEOS:END -->
+
 <h1 align="center">vms-lse-pascal</h1>
 
 <p align="center">
@@ -14,29 +27,12 @@
 
 <p align="center">
   <b><a href="https://assafbar2.github.io/vms-lse-pascal/">Run it in the browser</a></b>
+  &nbsp;·&nbsp; <a href="#videos">Videos</a>
   &nbsp;·&nbsp; <a href="#quick-start">Quick start</a>
   &nbsp;·&nbsp; <a href="#architecture">Architecture</a>
   &nbsp;·&nbsp; <a href="#what-the-toolchain-prints">Messages, maps, tracebacks</a>
   &nbsp;·&nbsp; <a href="#testing">Testing</a>
 </p>
-
-<!-- VIDEOS:START -->
-<!-- The poster and the three video links point at the demo-videos release assets.
-     Replace each href with its YouTube URL once the videos are uploaded. -->
-### Videos
-
-<p align="center">
-  <a href="https://github.com/assafbar2/vms-lse-pascal/releases/download/demo-videos/lse-intro-v2.mp4"><img src="docs/images/lse-hero.jpg" width="100%" alt="Poster frame of the intro video: LSE on a green-phosphor CRT, the Language-Sensitive Editor banner over a new GUESS.PAS with the EDIT > COMPILE > LINK > RUN status line. Links to the intro video."></a>
-</p>
-
-| Video | Length | What it shows |
-| --- | --- | --- |
-| [**Intro**](https://github.com/assafbar2/vms-lse-pascal/releases/download/demo-videos/lse-intro-v2.mp4) (MP4, 68 MB) | 0:40 | The real editor, captured key by key and composited onto a CRT: templates expand into `GUESS.PAS`, then `COMPILE`, `LINK`, `RUN` |
-| [**Browser demo**](https://github.com/assafbar2/vms-lse-pascal/releases/download/demo-videos/lse-web-demo.mp4) (MP4, 7 MB) | 1:28 | Google Chrome on the live site, from page load through the tutorial to a won game |
-| [**Terminal tutorial**](https://github.com/assafbar2/vms-lse-pascal/releases/download/demo-videos/lse-tutorial-demo.mp4) (MP4, 9 MB) | 4:18 | The ten-step tutorial in xfce4-terminal, from an empty file to a won game |
-
-The poster links to the intro. All three files are assets of the [demo-videos release](https://github.com/assafbar2/vms-lse-pascal/releases/tag/demo-videos).
-<!-- VIDEOS:END -->
 
 ## What this is
 
@@ -48,6 +44,16 @@ LSE was DEC's template-driven editor on VMS: type a keyword, expand it, and get 
 - **Browser build (`web/`).** The same Python packages, unmodified, on Pyodide in a Web Worker with xterm.js. Every push to `main` is deployed to GitHub Pages.
 
 There are no runtime dependencies beyond the Python 3.11+ standard library (plus `windows-curses` on Windows). The code is about 6,800 lines in `pascal/` and 9,000 in `lse/`, with 6,000 lines of tests.
+
+## Videos
+
+| Video | Length | What it shows |
+| --- | --- | --- |
+| [**Intro**](https://youtu.be/az2bLRXRGDo) | 0:40 | The real editor, captured key by key and composited onto a CRT: templates expand into `GUESS.PAS`, then `COMPILE`, `LINK`, `RUN` |
+| [**Live web demo**](https://youtu.be/egWrLfefIX8) | 1:28 | Google Chrome on the live site, from page load through the tutorial to a won game |
+| [**Terminal tutorial**](https://youtu.be/dHM4r9jti8w) | 4:18 | The ten-step tutorial in xfce4-terminal, from an empty file to a won game |
+
+[Download the files](https://github.com/assafbar2/vms-lse-pascal/releases/tag/demo-videos): the three MP4s (68 MB, 7 MB and 9 MB) and the intro poster, as assets of the `demo-videos` release.
 
 ## Quick start
 
