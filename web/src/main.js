@@ -390,7 +390,8 @@ async function main() {
         else if (msg.kind === "bell") {
           $("bezel").classList.add("bell");
           setTimeout(() => $("bezel").classList.remove("bell"), 160);
-        } else if (msg.kind === "error") console.error("LSE:", msg.value);
+        } else if (msg.kind === "files-deleted") startedOverElsewhere();
+        else if (msg.kind === "error") console.error("LSE:", msg.value);
         break;
       case "fatal":
         setStatus("LSE could not start", "error");
@@ -447,16 +448,63 @@ async function main() {
     if (panel.hidden) term.focus();
   });
 
+  // ----- Start over ---------------------------------------------------------
+  // Every tab of this site shares the files. Deleting them waits until no tab
+  // has them open, and a page that opens them meanwhile waits behind the
+  // delete; so Start over stops LSE in every tab, deletes the files, and only
+  // then reloads the tabs.
+
+  const tabs = "BroadcastChannel" in window ? new BroadcastChannel(`${STORE}tabs`) : null;
+  let stopped = false;
+
+  function stopLse(text) {
+    if (stopped) return;
+    stopped = true;
+    worker.terminate();
+    state.ready = false;
+    state.modified = false;
+    setStatus(text);
+    term.write(`\x1b[0m\x1b[2J\x1b[H\x1b[?25l\r\n  ${text}`);
+  }
+
+  function startedOverElsewhere() {
+    stopLse("Starting over (from another tab)...");
+    // without a channel there is no "done"; reloading early only waits for the delete
+    if (!tabs) setTimeout(() => location.reload(), 2000);
+  }
+
+  tabs?.addEventListener("message", (ev) => {
+    if (ev.data?.type === "reset") startedOverElsewhere();
+    else if (ev.data?.type === "reset-done" && stopped) location.reload();
+  });
+
   $("reset-btn").addEventListener("click", async () => {
+    if (stopped) return;
     if (!confirm("Start over? This erases your files and tutorial progress in this browser.")) {
       term.focus();
       return;
     }
-    worker.terminate();
+    stopLse("Starting over...");
+    tabs?.postMessage({ type: "reset" });
+    let blocked = 0;
     await new Promise((resolve) => {
       const req = indexedDB.deleteDatabase(HOME_DB);
-      req.onsuccess = req.onerror = req.onblocked = () => resolve();
+      req.onsuccess = () => resolve();
+      req.onerror = () => {
+        console.warn("could not erase the files:", req.error);
+        resolve();
+      };
+      // Briefly blocked is normal: the stopped worker lets go of the files.
+      // Longer means a tab with an older version of this page has them open.
+      req.onblocked = () => {
+        blocked = setTimeout(() => {
+          setStatus("Starting over: close LSE in your other tabs and windows", "warn");
+          term.write("\r\n\r\n  LSE is open in another tab or window. Close it to start over.");
+        }, 1500);
+      };
     });
+    clearTimeout(blocked);
+    tabs?.postMessage({ type: "reset-done" });
     location.reload();
   });
 
